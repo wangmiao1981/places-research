@@ -120,6 +120,8 @@ class WebSearcher:
             )
 
         self._client = TavilyClient(api_key=resolved_key)
+        if requests_per_second <= 0:
+            raise ValueError("requests_per_second must be positive")
         self.requests_per_second = requests_per_second
         self._min_interval: float = 1.0 / requests_per_second
         self._last_request_time: float = 0.0

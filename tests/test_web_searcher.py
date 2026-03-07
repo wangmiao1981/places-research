@@ -214,6 +214,61 @@ class TestCacheCorruption(unittest.TestCase):
         self.assertEqual(results[0].title, "Fresh")
 
 
+class TestWebSearcherEdgeCases(unittest.TestCase):
+
+    @patch("web_searcher.TavilyClient")
+    def test_zero_requests_per_second_raises(self, mock_tavily_cls):
+        """requests_per_second=0 raises ValueError instead of ZeroDivisionError."""
+        tmpdir = tempfile.mkdtemp()
+        from web_searcher import WebSearcher
+        with self.assertRaises(ValueError):
+            WebSearcher(api_key="key", cache_dir=tmpdir, requests_per_second=0)
+
+    @patch("web_searcher.TavilyClient")
+    def test_negative_requests_per_second_raises(self, mock_tavily_cls):
+        """Negative requests_per_second raises ValueError."""
+        tmpdir = tempfile.mkdtemp()
+        from web_searcher import WebSearcher
+        with self.assertRaises(ValueError):
+            WebSearcher(api_key="key", cache_dir=tmpdir, requests_per_second=-1)
+
+    @patch("web_searcher.TavilyClient")
+    def test_different_max_results_different_cache(self, mock_tavily_cls):
+        """Same query with different max_results uses different cache keys."""
+        mock_client = MagicMock()
+        mock_tavily_cls.return_value = mock_client
+        mock_client.search.return_value = {
+            "results": [{"title": "R", "url": "http://r.com", "content": "c", "score": 0.5}]
+        }
+        tmpdir = tempfile.mkdtemp()
+        from web_searcher import WebSearcher
+        ws = WebSearcher(api_key="key", cache_dir=tmpdir)
+        ws.search("same query", max_results=3)
+        ws.search("same query", max_results=5)
+        # API should be called twice since cache keys differ
+        self.assertEqual(mock_client.search.call_count, 2)
+
+    @patch("web_searcher.TavilyClient")
+    def test_cache_with_missing_keys_returns_none(self, mock_tavily_cls):
+        """Cache file with missing required keys triggers re-fetch."""
+        mock_client = MagicMock()
+        mock_tavily_cls.return_value = mock_client
+        mock_client.search.return_value = {
+            "results": [{"title": "Fresh", "url": "http://f.com", "content": "c", "score": 0.8}]
+        }
+        tmpdir = tempfile.mkdtemp()
+        from web_searcher import WebSearcher
+        ws = WebSearcher(api_key="key", cache_dir=tmpdir)
+        # Write cache with missing 'url' key
+        import hashlib
+        cache_key = hashlib.sha256("badkeys:5".encode()).hexdigest()
+        with open(os.path.join(tmpdir, f"{cache_key}.json"), "w") as f:
+            json.dump([{"title": "ok"}], f)  # missing url, content
+        results = ws.search("badkeys")
+        # Should re-fetch from API since from_dict raises KeyError
+        self.assertEqual(mock_client.search.call_count, 1)
+
+
 @unittest.skip("Requires TAVILY_API_KEY — run manually for integration testing")
 class TestIntegrationSearch(unittest.TestCase):
     def test_real_search(self):
