@@ -622,8 +622,17 @@ class TestBedrockBearerInit(unittest.TestCase):
 
 _HAS_BEARER = bool(os.environ.get("AWS_BEARER_TOKEN_BEDROCK"))
 
-# Bedrock model IDs require the full ARN-style name
+# Bedrock model IDs (full cross-region inference names)
 _HAIKU_BEDROCK = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+_SONNET_BEDROCK = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+_OPUS_BEDROCK = "us.anthropic.claude-opus-4-20250514-v1:0"
+
+
+def _make_bearer_client(model=_HAIKU_BEDROCK):
+    """Helper: import real llm_client and create a bearer-auth client."""
+    import importlib
+    real_llm = importlib.import_module("llm_client")
+    return real_llm.LLMClient(force_bedrock_bearer=True, default_model=model)
 
 
 @unittest.skipUnless(_HAS_BEARER, "requires AWS_BEARER_TOKEN_BEDROCK")
@@ -631,13 +640,7 @@ class TestBedrockBearerIntegration(unittest.TestCase):
     """Integration tests that hit real Bedrock API via bearer token."""
 
     def setUp(self):
-        # Import fresh to get the real module (not the mocked one)
-        import importlib
-        self._real_llm = importlib.import_module("llm_client")
-        self.client = self._real_llm.LLMClient(
-            force_bedrock_bearer=True,
-            default_model=_HAIKU_BEDROCK,
-        )
+        self.client = _make_bearer_client(_HAIKU_BEDROCK)
 
     def test_real_call(self):
         """Make a real API call via Bedrock bearer and verify a response."""
@@ -647,14 +650,13 @@ class TestBedrockBearerIntegration(unittest.TestCase):
         )
         self.assertIsInstance(result, str)
         self.assertGreater(len(result), 0)
-        print(f"  [integration] Response: {result!r}")
+        print(f"  [integration] Haiku response: {result!r}")
 
     def test_real_token_tracking(self):
         """Verify real Bedrock call tracks token usage."""
         self.client.call(
             system="You are a helpful assistant.",
             user="What is 1+1? Answer with just the number.",
-            model=_HAIKU_BEDROCK,
         )
         summary = self.client.get_usage_summary()
         self.assertGreater(summary["total_input_tokens"], 0)
@@ -664,12 +666,48 @@ class TestBedrockBearerIntegration(unittest.TestCase):
 
     def test_real_multiple_calls_accumulate(self):
         """Token usage accumulates across multiple real calls."""
-        self.client.call(system="Be brief.", user="Say 'A'.", model=_HAIKU_BEDROCK)
-        self.client.call(system="Be brief.", user="Say 'B'.", model=_HAIKU_BEDROCK)
+        self.client.call(system="Be brief.", user="Say 'A'.")
+        self.client.call(system="Be brief.", user="Say 'B'.")
         summary = self.client.get_usage_summary()
         self.assertEqual(summary["total_calls"], 2)
         self.assertGreater(summary["total_input_tokens"], 0)
         print(f"  [integration] Accumulated usage: {summary}")
+
+
+@unittest.skipUnless(_HAS_BEARER, "requires AWS_BEARER_TOKEN_BEDROCK")
+class TestBedrockSonnetIntegration(unittest.TestCase):
+    """Integration test: verify Sonnet model is accessible via Bedrock."""
+
+    def test_sonnet_accessible(self):
+        """Sonnet responds to a simple prompt via Bedrock bearer token."""
+        client = _make_bearer_client(_SONNET_BEDROCK)
+        result = client.call(
+            system="Be very brief.",
+            user="Say 'hello world' and nothing else.",
+            model=_SONNET_BEDROCK,
+            max_tokens=20,
+        )
+        self.assertIsInstance(result, str)
+        self.assertGreater(len(result), 0)
+        print(f"  [integration] Sonnet response: {result!r}")
+
+
+@unittest.skipUnless(_HAS_BEARER, "requires AWS_BEARER_TOKEN_BEDROCK")
+class TestBedrockOpusIntegration(unittest.TestCase):
+    """Integration test: verify Opus model is accessible via Bedrock."""
+
+    def test_opus_accessible(self):
+        """Opus responds to a simple prompt via Bedrock bearer token."""
+        client = _make_bearer_client(_OPUS_BEDROCK)
+        result = client.call(
+            system="Be very brief.",
+            user="Say 'hello world' and nothing else.",
+            model=_OPUS_BEDROCK,
+            max_tokens=20,
+        )
+        self.assertIsInstance(result, str)
+        self.assertGreater(len(result), 0)
+        print(f"  [integration] Opus response: {result!r}")
 
 
 # ---------------------------------------------------------------------------
