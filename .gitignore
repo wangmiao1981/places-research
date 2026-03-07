@@ -26,6 +26,7 @@ results/
 *.json
 *.html
 !requirements*.txt
+!tests/fixtures/*.json
 
 # Generated analysis files and temporary files
 analysis_prompt_*.txt
