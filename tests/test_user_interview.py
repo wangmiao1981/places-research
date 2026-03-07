@@ -455,5 +455,56 @@ class TestEdgeCases(unittest.TestCase):
         self.assertEqual(profile["data_source"], "output/massage.json")
 
 
+# ===========================================================================
+# Proactive bug-catching tests
+# ===========================================================================
+
+class TestProactiveEdgeCases(unittest.TestCase):
+
+    def test_uppercase_G_other_option(self):
+        """Uppercase 'G' should be treated same as lowercase for Other."""
+        interviewer = UserInterviewer(SAMPLE_BUSINESS_DATA)
+        interviewer._detected_type = "massage"
+        inputs = ["y", "Swedish", "G", "Custom type", "50000-100000", "good service", "a"]
+        with patch("builtins.input", side_effect=inputs):
+            profile = interviewer.run()
+        self.assertEqual(profile["target_clientele"], "Custom type")
+
+    def test_parse_budget_zero_range(self):
+        """_parse_budget('0-0') returns a valid dict (zero budget)."""
+        result = UserInterviewer._parse_budget("0-0")
+        self.assertEqual(result, {"min": 0, "max": 0})
+
+    def test_parse_budget_same_min_max(self):
+        """_parse_budget('50000-50000') returns valid range."""
+        result = UserInterviewer._parse_budget("50000-50000")
+        self.assertEqual(result, {"min": 50000, "max": 50000})
+
+    def test_parse_budget_reversed_returns_none(self):
+        """_parse_budget('100-50') returns None since min > max."""
+        result = UserInterviewer._parse_budget("100-50")
+        self.assertIsNone(result)
+
+    def test_parse_budget_empty_string(self):
+        """_parse_budget('') returns None."""
+        result = UserInterviewer._parse_budget("")
+        self.assertIsNone(result)
+
+    def test_other_with_empty_custom_defaults_to_other(self):
+        """Selecting 'g' then entering empty string defaults to 'Other'."""
+        interviewer = UserInterviewer(SAMPLE_BUSINESS_DATA)
+        interviewer._detected_type = "massage"
+        inputs = ["y", "Swedish", "g", "", "50000-100000", "good service", "a"]
+        with patch("builtins.input", side_effect=inputs):
+            profile = interviewer.run()
+        self.assertEqual(profile["target_clientele"], "Other")
+
+    def test_detect_business_type_with_no_name_field(self):
+        """Entries missing 'name' key should not crash detection."""
+        data = [{"place_id": "1"}, {"place_id": "2", "name": "Yoga Haven"}]
+        interviewer = UserInterviewer(data)
+        self.assertEqual(interviewer._detected_type, "yoga")
+
+
 if __name__ == "__main__":
     unittest.main()
