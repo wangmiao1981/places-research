@@ -205,6 +205,10 @@ class LLMClient:
             self.auth_method = "bedrock_bearer"
             self._client = _BedrockBearerClient(bearer_token=token, region=region)
         elif force_bedrock:
+            if not _BEDROCK_AVAILABLE:
+                raise LLMError(
+                    "Bedrock auth requires 'anthropic[bedrock]' (pip install anthropic[bedrock])."
+                )
             self.auth_method = "bedrock"
             self._client = AnthropicBedrock()
         elif api_key is not None:
@@ -218,9 +222,14 @@ class LLMClient:
             region = os.environ.get("AWS_REGION", "us-west-2")
             self.auth_method = "bedrock_bearer"
             self._client = _BedrockBearerClient(bearer_token=token, region=region)
-        else:
+        elif _BEDROCK_AVAILABLE:
             self.auth_method = "bedrock"
             self._client = AnthropicBedrock()
+        else:
+            raise LLMError(
+                "No authentication method found. Set ANTHROPIC_API_KEY, "
+                "AWS_BEARER_TOKEN_BEDROCK, or install anthropic[bedrock] with AWS credentials."
+            )
 
     # ------------------------------------------------------------------
     # Public API
@@ -252,7 +261,6 @@ class LLMClient:
             LLMError: If the call fails after all retries.
         """
         resolved_model = model or self.default_model
-        last_error: Optional[Exception] = None
 
         for attempt in range(MAX_RETRIES + 1):
             try:
@@ -266,7 +274,6 @@ class LLMClient:
                 return response.content[0].text
 
             except anthropic.RateLimitError as exc:
-                last_error = exc
                 if attempt < MAX_RETRIES:
                     self._backoff(attempt)
                     continue
@@ -275,7 +282,6 @@ class LLMClient:
                 ) from exc
 
             except anthropic.InternalServerError as exc:
-                last_error = exc
                 if attempt < MAX_RETRIES:
                     self._backoff(attempt)
                     continue
@@ -320,6 +326,9 @@ class LLMClient:
                     and event.delta.type == "text_delta"
                 ):
                     yield event.delta.text
+            # Track usage after stream completes
+            final = stream.get_final_message()
+            self._record_usage(resolved_model, final.usage)
 
     def get_usage_summary(self) -> Dict[str, Any]:
         """

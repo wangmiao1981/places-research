@@ -516,27 +516,39 @@ class TestLLMClientStream(unittest.TestCase):
             chunks.append(chunk)
         return chunks
 
+    def _make_stream_cm(self, chunks, input_tokens=50, output_tokens=20):
+        """Build a mock stream context manager with get_final_message."""
+        mock_stream_cm = MagicMock()
+        mock_stream_cm.__enter__ = MagicMock(return_value=mock_stream_cm)
+        mock_stream_cm.__exit__ = MagicMock(return_value=False)
+        mock_stream_cm.__iter__ = MagicMock(return_value=iter(chunks))
+        mock_stream_cm.get_final_message.return_value = _make_message(
+            "streamed", input_tokens, output_tokens
+        )
+        self.client._client.messages.stream = MagicMock(return_value=mock_stream_cm)
+        return mock_stream_cm
+
     def test_stream_yields_text_chunks(self):
         """stream() yields text chunks from the streaming response."""
         chunks = self._make_stream_chunks(["Hello", ", ", "world!"])
-
-        # Mock the context manager returned by client.messages.stream()
-        mock_stream_cm = MagicMock()
-        mock_stream_cm.__enter__ = MagicMock(return_value=iter(chunks))
-        mock_stream_cm.__exit__ = MagicMock(return_value=False)
-        self.client._client.messages.stream = MagicMock(return_value=mock_stream_cm)
-
+        self._make_stream_cm(chunks)
         result = list(self.client.stream(system="s", user="u"))
         self.assertEqual(result, ["Hello", ", ", "world!"])
+
+    def test_stream_tracks_usage(self):
+        """stream() tracks token usage after stream completes."""
+        chunks = self._make_stream_chunks(["ok"])
+        self._make_stream_cm(chunks, input_tokens=80, output_tokens=30)
+        list(self.client.stream(system="s", user="u"))
+        summary = self.client.get_usage_summary()
+        self.assertEqual(summary["total_input_tokens"], 80)
+        self.assertEqual(summary["total_output_tokens"], 30)
+        self.assertEqual(summary["total_calls"], 1)
 
     def test_stream_uses_default_model(self):
         """stream() uses the default model when none specified."""
         chunks = self._make_stream_chunks(["ok"])
-        mock_stream_cm = MagicMock()
-        mock_stream_cm.__enter__ = MagicMock(return_value=iter(chunks))
-        mock_stream_cm.__exit__ = MagicMock(return_value=False)
-        self.client._client.messages.stream = MagicMock(return_value=mock_stream_cm)
-
+        self._make_stream_cm(chunks)
         list(self.client.stream(system="s", user="u"))
         _, kwargs = self.client._client.messages.stream.call_args
         self.assertEqual(kwargs["model"], self.client.default_model)
@@ -544,11 +556,7 @@ class TestLLMClientStream(unittest.TestCase):
     def test_stream_uses_custom_model(self):
         """stream() accepts an explicit model parameter."""
         chunks = self._make_stream_chunks(["ok"])
-        mock_stream_cm = MagicMock()
-        mock_stream_cm.__enter__ = MagicMock(return_value=iter(chunks))
-        mock_stream_cm.__exit__ = MagicMock(return_value=False)
-        self.client._client.messages.stream = MagicMock(return_value=mock_stream_cm)
-
+        self._make_stream_cm(chunks)
         list(self.client.stream(system="s", user="u", model="claude-haiku-4-6"))
         _, kwargs = self.client._client.messages.stream.call_args
         self.assertEqual(kwargs["model"], "claude-haiku-4-6")
@@ -564,11 +572,7 @@ class TestLLMClientStream(unittest.TestCase):
         chunk_other = MagicMock()
         chunk_other.type = "message_start"
 
-        mock_stream_cm = MagicMock()
-        mock_stream_cm.__enter__ = MagicMock(return_value=iter([chunk_other, chunk_text]))
-        mock_stream_cm.__exit__ = MagicMock(return_value=False)
-        self.client._client.messages.stream = MagicMock(return_value=mock_stream_cm)
-
+        self._make_stream_cm([chunk_other, chunk_text])
         result = list(self.client.stream(system="s", user="u"))
         self.assertEqual(result, ["real text"])
 
