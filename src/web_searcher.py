@@ -217,7 +217,7 @@ class WebSearcher:
             with path.open("r", encoding="utf-8") as fh:
                 data = json.load(fh)
             return [SearchResult.from_dict(item) for item in data]
-        except (OSError, json.JSONDecodeError, KeyError) as exc:
+        except (OSError, json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
             logger.warning("Failed to load cache file %s: %s", path, exc)
             return None
 
@@ -241,15 +241,12 @@ class WebSearcher:
     @staticmethod
     def _parse_response(response: dict) -> List[SearchResult]:
         """Convert a raw Tavily API response dict into SearchResult objects."""
-        raw_results = response.get("results", [])
-        results = []
-        for item in raw_results:
-            results.append(
-                SearchResult(
-                    title=item.get("title", ""),
-                    url=item.get("url", ""),
-                    content=item.get("content", ""),
-                    score=float(item.get("score", 0.0)),
-                )
+        return [
+            SearchResult(
+                title=item.get("title", ""),
+                url=item.get("url", ""),
+                content=item.get("content", ""),
+                score=float(item.get("score", 0.0)),
             )
-        return results
+            for item in response.get("results", [])
+        ]
