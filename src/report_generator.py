@@ -57,7 +57,6 @@ class ReportGenerator:
         strategy: Optional[dict] = None,
     ) -> str:
         """Generate report even when some artifacts are missing."""
-        placeholder = "(Data not available)"
         return self.generate(
             business_type=business_type,
             location=location,
