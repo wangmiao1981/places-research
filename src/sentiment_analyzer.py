@@ -11,16 +11,7 @@ from llm_client import LLMClient
 from prompt_engine import PromptEngine
 
 REVIEWS_PER_BATCH = 20
-DEFAULT_MODEL = "claude-sonnet-4-6"
 MAX_TOKENS = 2048
-
-_EMPTY_RESULT = {
-    "positive_themes": [],
-    "negative_themes": [],
-    "service_quality_patterns": [],
-    "unmet_needs": [],
-    "overall_sentiment": "unknown",
-}
 
 
 def _make_empty_result() -> dict:
@@ -75,10 +66,10 @@ def _merge_results(results: List[dict]) -> dict:
     }
     sentiments = []
     for r in results:
-        merged["positive_themes"].extend(r.get("positive_themes", []))
-        merged["negative_themes"].extend(r.get("negative_themes", []))
-        merged["service_quality_patterns"].extend(r.get("service_quality_patterns", []))
-        merged["unmet_needs"].extend(r.get("unmet_needs", []))
+        merged["positive_themes"].extend(r.get("positive_themes") or [])
+        merged["negative_themes"].extend(r.get("negative_themes") or [])
+        merged["service_quality_patterns"].extend(r.get("service_quality_patterns") or [])
+        merged["unmet_needs"].extend(r.get("unmet_needs") or [])
         if r.get("overall_sentiment"):
             sentiments.append(r["overall_sentiment"])
 
