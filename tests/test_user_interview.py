@@ -37,19 +37,6 @@ SAMPLE_BUSINESS_DATA_WITH_SOURCE = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Helper to build an interviewer with a fixed detected type
-# ---------------------------------------------------------------------------
-
-def _make_interviewer(data=None, detected_type="massage"):
-    """Create a UserInterviewer; patch detect_business_type so tests are stable."""
-    if data is None:
-        data = SAMPLE_BUSINESS_DATA
-    interviewer = UserInterviewer(data)
-    interviewer._detected_type = detected_type
-    return interviewer
-
-
 # ===========================================================================
 # Business-type detection
 # ===========================================================================

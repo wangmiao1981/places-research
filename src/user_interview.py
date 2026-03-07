@@ -173,7 +173,7 @@ class UserInterviewer:
         differentiators = self._ask(
             "What will make your business different from competitors? "
             "(describe briefly) "
-        )
+        ).strip()
 
         # ── Q6: Location preference ─────────────────────────────────────
         location_preference = self._ask_multiple_choice(
