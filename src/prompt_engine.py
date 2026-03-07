@@ -36,7 +36,8 @@ class PromptEngine:
 
         if business_type:
             context = self.get_business_context(business_type)
-            template = context + "\n\n" + template
+            if context:
+                template = context + "\n\n" + template
 
         # Find all placeholders in the template BEFORE substitution
         required = set(re.findall(r"\{\{(\w+)\}\}", template))
