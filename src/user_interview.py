@@ -113,7 +113,7 @@ class UserInterviewer:
         while True:
             answer = self._ask(full_prompt).strip().lower()
             if answer in options:
-                if answer == "g" and options.get("g") == "Other":
+                if options[answer] == "Other":
                     custom = self._ask("Please specify: ").strip()
                     return custom if custom else "Other"
                 return options[answer]
