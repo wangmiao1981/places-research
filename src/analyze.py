@@ -146,7 +146,7 @@ def run_pipeline(
 
         try:
             result = _run_stage(
-                current_stage, businesses, output_dir, artifacts,
+                current_stage, businesses, artifacts,
                 llm_client, prompt_engine, web_searcher,
             )
             artifacts[current_stage] = result
@@ -173,7 +173,6 @@ def run_pipeline(
 def _run_stage(
     stage: str,
     businesses: List[dict],
-    output_dir: str,
     artifacts: Dict[str, Any],
     llm_client, prompt_engine, web_searcher,
 ) -> Any:
