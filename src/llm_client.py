@@ -10,9 +10,13 @@ Provides a thin wrapper around the Anthropic SDK supporting:
 - Streaming support
 """
 
+import json as _json
 import os
 import time
+from dataclasses import dataclass
 from typing import Generator, List, Optional, Dict, Any
+
+import requests as _requests
 
 import anthropic
 
@@ -22,6 +26,97 @@ try:
     _BEDROCK_AVAILABLE = True
 except ImportError:
     _BEDROCK_AVAILABLE = False
+
+
+# ---------------------------------------------------------------------------
+# Bedrock Bearer-Token adapter (raw HTTP, no SigV4)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _Usage:
+    input_tokens: int
+    output_tokens: int
+
+
+@dataclass
+class _ContentBlock:
+    text: str
+
+
+@dataclass
+class _MessageResponse:
+    content: List[_ContentBlock]
+    usage: _Usage
+
+
+class _BedrockBearerMessages:
+    """Mimics ``client.messages.create()`` using raw HTTP to Bedrock."""
+
+    def __init__(self, bearer_token: str, region: str) -> None:
+        self._token = bearer_token
+        self._region = region
+
+    def create(self, *, model: str, max_tokens: int, system: str,
+               messages: list, **kwargs) -> _MessageResponse:
+        url = (
+            f"https://bedrock-runtime.{self._region}.amazonaws.com"
+            f"/model/{model}/invoke"
+        )
+        body = {
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": max_tokens,
+            "system": system,
+            "messages": messages,
+        }
+        resp = _requests.post(
+            url,
+            headers={
+                "Authorization": f"Bearer {self._token}",
+                "Content-Type": "application/json",
+            },
+            json=body,
+            timeout=120,
+        )
+        if resp.status_code == 429:
+            raise anthropic.RateLimitError(
+                message="Rate limit exceeded",
+                response=resp,
+                body=resp.text,
+            )
+        if resp.status_code >= 500:
+            raise anthropic.InternalServerError(
+                message=f"Server error {resp.status_code}",
+                response=resp,
+                body=resp.text,
+            )
+        if resp.status_code != 200:
+            raise anthropic.APIStatusError(
+                message=f"Bedrock error {resp.status_code}: {resp.text}",
+                response=resp,
+                body=resp.text,
+            )
+        data = resp.json()
+        usage = data.get("usage", {})
+        return _MessageResponse(
+            content=[_ContentBlock(text=b["text"]) for b in data.get("content", [])],
+            usage=_Usage(
+                input_tokens=usage.get("input_tokens", 0),
+                output_tokens=usage.get("output_tokens", 0),
+            ),
+        )
+
+    def stream(self, **kwargs):
+        raise NotImplementedError(
+            "Streaming is not yet supported for bedrock_bearer auth. "
+            "Use call() instead, or switch to api_key or bedrock auth."
+        )
+
+
+class _BedrockBearerClient:
+    """Adapter that provides ``client.messages`` backed by raw HTTP."""
+
+    def __init__(self, bearer_token: str, region: str) -> None:
+        self.messages = _BedrockBearerMessages(bearer_token, region)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -79,12 +174,16 @@ class LLMClient:
     """
     Thin wrapper around the Anthropic SDK for calling Claude models.
 
-    Authentication is auto-detected:
-    1. If ``api_key`` is provided explicitly, use it.
+    Authentication is auto-detected (in priority order):
+    1. If ``api_key`` is provided explicitly, use it (API key auth).
     2. If ``ANTHROPIC_API_KEY`` env var is set, use it (API key auth).
-    3. Otherwise, fall back to Bedrock auth (requires AWS credentials).
+    3. If ``AWS_BEARER_TOKEN_BEDROCK`` env var is set, use raw HTTP to
+       Bedrock with bearer token auth (no SigV4 / boto3 required).
+    4. Otherwise, fall back to ``AnthropicBedrock`` (requires AWS IAM creds).
 
-    Pass ``force_bedrock=True`` to skip auto-detection and always use Bedrock.
+    Pass ``force_bedrock=True`` to skip auto-detection and use Bedrock
+    (IAM/SigV4).  Pass ``force_bedrock_bearer=True`` to force bearer token
+    auth.
     """
 
     def __init__(
@@ -92,6 +191,7 @@ class LLMClient:
         api_key: Optional[str] = None,
         default_model: str = DEFAULT_MODEL,
         force_bedrock: bool = False,
+        force_bedrock_bearer: bool = False,
     ) -> None:
         self.default_model = default_model
         self.call_history: List[Dict[str, Any]] = []
@@ -99,7 +199,12 @@ class LLMClient:
         self._total_output_tokens: int = 0
         self._estimated_cost: float = 0.0
 
-        if force_bedrock:
+        if force_bedrock_bearer:
+            token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK", "")
+            region = os.environ.get("AWS_REGION", "us-west-2")
+            self.auth_method = "bedrock_bearer"
+            self._client = _BedrockBearerClient(bearer_token=token, region=region)
+        elif force_bedrock:
             self.auth_method = "bedrock"
             self._client = AnthropicBedrock()
         elif api_key is not None:
@@ -108,6 +213,11 @@ class LLMClient:
         elif os.environ.get("ANTHROPIC_API_KEY"):
             self.auth_method = "api_key"
             self._client = anthropic.Anthropic()
+        elif os.environ.get("AWS_BEARER_TOKEN_BEDROCK"):
+            token = os.environ["AWS_BEARER_TOKEN_BEDROCK"]
+            region = os.environ.get("AWS_REGION", "us-west-2")
+            self.auth_method = "bedrock_bearer"
+            self._client = _BedrockBearerClient(bearer_token=token, region=region)
         else:
             self.auth_method = "bedrock"
             self._client = AnthropicBedrock()

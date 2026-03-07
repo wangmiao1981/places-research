@@ -146,8 +146,9 @@ class TestLLMClientInit(unittest.TestCase):
         self.assertEqual(client.auth_method, "api_key")
 
     def test_auto_detect_falls_back_to_bedrock(self):
-        """Auto-detection falls back to Bedrock when no API key present."""
-        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        """Auto-detection falls back to Bedrock when no API key or bearer token present."""
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("ANTHROPIC_API_KEY", "AWS_BEARER_TOKEN_BEDROCK")}
         with patch.dict(os.environ, env, clear=True):
             with patch.dict("sys.modules", {
                 "anthropic": _anthropic_mock,
@@ -573,15 +574,117 @@ class TestLLMClientStream(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-# Integration test stubs (skipped — require real credentials)
+# Test: Bedrock bearer token auth path (unit tests)
 # ---------------------------------------------------------------------------
 
-@unittest.skip("requires ANTHROPIC_API_KEY environment variable")
+class TestBedrockBearerInit(unittest.TestCase):
+
+    def test_auto_detect_bearer_token(self):
+        """Auto-detection picks bedrock_bearer when bearer token is set."""
+        env = {k: v for k, v in os.environ.items()
+               if k not in ("ANTHROPIC_API_KEY",)}
+        env["AWS_BEARER_TOKEN_BEDROCK"] = "test-token"
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                client = LLMClient()
+        self.assertEqual(client.auth_method, "bedrock_bearer")
+
+    def test_force_bedrock_bearer(self):
+        """force_bedrock_bearer=True selects bearer auth."""
+        with patch.dict(os.environ, {"AWS_BEARER_TOKEN_BEDROCK": "tk", "AWS_REGION": "us-east-1"}, clear=False):
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                client = LLMClient(force_bedrock_bearer=True)
+        self.assertEqual(client.auth_method, "bedrock_bearer")
+
+    def test_api_key_preferred_over_bearer(self):
+        """API key auth takes priority over bearer token."""
+        env = {k: v for k, v in os.environ.items()}
+        env["ANTHROPIC_API_KEY"] = "sk-test"
+        env["AWS_BEARER_TOKEN_BEDROCK"] = "tk"
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                client = LLMClient()
+        self.assertEqual(client.auth_method, "api_key")
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — Bedrock bearer token (real API calls)
+# ---------------------------------------------------------------------------
+
+_HAS_BEARER = bool(os.environ.get("AWS_BEARER_TOKEN_BEDROCK"))
+
+# Bedrock model IDs require the full ARN-style name
+_HAIKU_BEDROCK = "us.anthropic.claude-haiku-4-5-20251001-v1:0"
+
+
+@unittest.skipUnless(_HAS_BEARER, "requires AWS_BEARER_TOKEN_BEDROCK")
+class TestBedrockBearerIntegration(unittest.TestCase):
+    """Integration tests that hit real Bedrock API via bearer token."""
+
+    def setUp(self):
+        # Import fresh to get the real module (not the mocked one)
+        import importlib
+        self._real_llm = importlib.import_module("llm_client")
+        self.client = self._real_llm.LLMClient(
+            force_bedrock_bearer=True,
+            default_model=_HAIKU_BEDROCK,
+        )
+
+    def test_real_call(self):
+        """Make a real API call via Bedrock bearer and verify a response."""
+        result = self.client.call(
+            system="You are a helpful assistant. Be very brief.",
+            user="Say 'hello' and nothing else.",
+        )
+        self.assertIsInstance(result, str)
+        self.assertGreater(len(result), 0)
+        print(f"  [integration] Response: {result!r}")
+
+    def test_real_token_tracking(self):
+        """Verify real Bedrock call tracks token usage."""
+        self.client.call(
+            system="You are a helpful assistant.",
+            user="What is 1+1? Answer with just the number.",
+            model=_HAIKU_BEDROCK,
+        )
+        summary = self.client.get_usage_summary()
+        self.assertGreater(summary["total_input_tokens"], 0)
+        self.assertGreater(summary["total_output_tokens"], 0)
+        self.assertGreater(summary["estimated_cost_usd"], 0)
+        print(f"  [integration] Usage: {summary}")
+
+    def test_real_multiple_calls_accumulate(self):
+        """Token usage accumulates across multiple real calls."""
+        self.client.call(system="Be brief.", user="Say 'A'.", model=_HAIKU_BEDROCK)
+        self.client.call(system="Be brief.", user="Say 'B'.", model=_HAIKU_BEDROCK)
+        summary = self.client.get_usage_summary()
+        self.assertEqual(summary["total_calls"], 2)
+        self.assertGreater(summary["total_input_tokens"], 0)
+        print(f"  [integration] Accumulated usage: {summary}")
+
+
+# ---------------------------------------------------------------------------
+# Integration tests — API key auth (skipped unless key available)
+# ---------------------------------------------------------------------------
+
+@unittest.skipUnless(os.environ.get("ANTHROPIC_API_KEY"),
+                     "requires ANTHROPIC_API_KEY environment variable")
 class TestLLMClientIntegration(unittest.TestCase):
     """Integration tests that hit the real Anthropic API."""
 
     def setUp(self):
-        self.client = LLMClient()
+        import importlib
+        self._real_llm = importlib.import_module("llm_client")
+        self.client = self._real_llm.LLMClient()
 
     def test_real_call(self):
         """Make a real API call and verify a response is returned."""
@@ -614,12 +717,17 @@ class TestLLMClientIntegration(unittest.TestCase):
         self.assertIn("1", full_text)
 
 
-@unittest.skip("requires AWS credentials and Bedrock access")
+@unittest.skipUnless(
+    os.environ.get("AWS_ACCESS_KEY_ID"),
+    "requires AWS IAM credentials and Bedrock access",
+)
 class TestLLMClientBedrockIntegration(unittest.TestCase):
-    """Integration tests for Bedrock auth path."""
+    """Integration tests for Bedrock SigV4 auth path."""
 
     def setUp(self):
-        self.client = LLMClient(force_bedrock=True)
+        import importlib
+        self._real_llm = importlib.import_module("llm_client")
+        self.client = self._real_llm.LLMClient(force_bedrock=True)
 
     def test_bedrock_call(self):
         """Make a real API call via Bedrock."""
