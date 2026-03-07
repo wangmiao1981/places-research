@@ -113,6 +113,14 @@ class TestRender(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.engine.render("test_template", {})
 
+    def test_render_value_containing_braces_no_false_positive(self):
+        """Values with {{...}} patterns should not trigger unfilled placeholder error."""
+        result = self.engine.render("test_template", {
+            "name": "Alice",
+            "city": "code: {{some_var}} here",
+        })
+        self.assertIn("{{some_var}}", result)
+
 
 class TestListTemplates(unittest.TestCase):
     def setUp(self):

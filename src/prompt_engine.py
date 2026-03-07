@@ -1,4 +1,3 @@
-import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -34,14 +33,17 @@ class PromptEngine:
             context = self.get_business_context(business_type)
             template = context + "\n\n" + template
 
+        # Find all placeholders in the template BEFORE substitution
+        required = set(re.findall(r"\{\{(\w+)\}\}", template))
+
         # Substitute all {{placeholder}} with values
         for key, value in variables.items():
             template = template.replace("{{" + key + "}}", str(value))
 
-        # Check for unfilled placeholders
-        remaining = re.findall(r"\{\{(\w+)\}\}", template)
-        if remaining:
-            raise ValueError(f"Unfilled placeholders: {', '.join(remaining)}")
+        # Check for unfilled placeholders (only those from the original template)
+        unfilled = required - set(variables.keys())
+        if unfilled:
+            raise ValueError(f"Unfilled placeholders: {', '.join(sorted(unfilled))}")
 
         return template
 
@@ -49,8 +51,4 @@ class PromptEngine:
         prompts_path = Path(self.prompts_dir)
         if not prompts_path.exists():
             return []
-        templates = []
-        for f in prompts_path.iterdir():
-            if f.is_file() and f.suffix == ".md":
-                templates.append(f.stem)
-        return sorted(templates)
+        return sorted(f.stem for f in prompts_path.iterdir() if f.is_file() and f.suffix == ".md")
