@@ -34,6 +34,12 @@ analysis_prompt_*.txt
 *.swp
 *.swo
 
+# Build artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
 # Temporary files
 temp_*.txt
 tmp_*.txt
