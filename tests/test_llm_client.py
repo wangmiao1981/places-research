@@ -781,5 +781,76 @@ class TestLLMClientBedrockIntegration(unittest.TestCase):
         self.assertTrue(len(result) > 0)
 
 
+# ---------------------------------------------------------------------------
+# Proactive bug-catching tests
+# ---------------------------------------------------------------------------
+
+class TestLLMClientEdgeCases(unittest.TestCase):
+
+    def setUp(self):
+        with patch.dict("sys.modules", {
+            "anthropic": _anthropic_mock,
+            "anthropic_bedrock": _anthropic_bedrock_mock,
+        }):
+            self.client = LLMClient(api_key="test-key")
+        self.client._client = MagicMock()
+        self.mock_messages = MagicMock()
+        self.client._client.messages = self.mock_messages
+
+    def test_call_empty_content_raises(self):
+        """call() raises LLMError when API returns empty content list."""
+        msg = MagicMock()
+        msg.content = []
+        msg.usage = _make_usage(10, 5)
+        self.mock_messages.create.return_value = msg
+        with self.assertRaises(LLMError) as ctx:
+            self.client.call(system="s", user="u")
+        self.assertIn("empty content", str(ctx.exception))
+
+    def test_stream_bedrock_bearer_raises_not_implemented(self):
+        """stream() on bedrock_bearer auth raises NotImplementedError."""
+        with patch.dict(os.environ, {"AWS_BEARER_TOKEN_BEDROCK": "tk"}, clear=False):
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                client = LLMClient(force_bedrock_bearer=True)
+        with self.assertRaises(NotImplementedError):
+            list(client.stream(system="s", user="u"))
+
+    def test_force_bedrock_unavailable_raises(self):
+        """force_bedrock=True raises LLMError when AnthropicBedrock is not installed."""
+        original = llm_client._BEDROCK_AVAILABLE
+        try:
+            llm_client._BEDROCK_AVAILABLE = False
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                with self.assertRaises(LLMError) as ctx:
+                    LLMClient(force_bedrock=True)
+            self.assertIn("Bedrock auth requires", str(ctx.exception))
+        finally:
+            llm_client._BEDROCK_AVAILABLE = original
+
+    def test_no_auth_raises(self):
+        """No authentication available raises LLMError."""
+        original = llm_client._BEDROCK_AVAILABLE
+        try:
+            llm_client._BEDROCK_AVAILABLE = False
+            env = {k: v for k, v in os.environ.items()
+                   if k not in ("ANTHROPIC_API_KEY", "AWS_BEARER_TOKEN_BEDROCK")}
+            with patch.dict(os.environ, env, clear=True):
+                with patch.dict("sys.modules", {
+                    "anthropic": _anthropic_mock,
+                    "anthropic_bedrock": _anthropic_bedrock_mock,
+                }):
+                    with self.assertRaises(LLMError) as ctx:
+                        LLMClient()
+            self.assertIn("No authentication method", str(ctx.exception))
+        finally:
+            llm_client._BEDROCK_AVAILABLE = original
+
+
 if __name__ == "__main__":
     unittest.main()

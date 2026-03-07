@@ -10,7 +10,6 @@ Provides a thin wrapper around the Anthropic SDK supporting:
 - Streaming support
 """
 
-import json as _json
 import os
 import time
 from dataclasses import dataclass
@@ -271,6 +270,8 @@ class LLMClient:
                     messages=[{"role": "user", "content": user}],
                 )
                 self._record_usage(resolved_model, response.usage)
+                if not response.content:
+                    raise LLMError("API returned empty content list")
                 return response.content[0].text
 
             except anthropic.RateLimitError as exc:
