@@ -1,0 +1,43 @@
+# .gitignore
+
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# IDE and editor specific files
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Generated output files
+*.log
+output/
+results/
+
+# Generated data and map files (but allow requirements files)
+*.json
+*.html
+!requirements*.txt
+
+# Generated analysis files and temporary files
+analysis_prompt_*.txt
+*_analysis.txt
+*_analysis_*.txt
+*.swp
+*.swo
+
+# Temporary files
+temp_*.txt
+tmp_*.txt
+tmp.*
+*.tmp
+test_*.txt
+*.bak

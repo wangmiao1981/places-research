@@ -1,0 +1,11 @@
+# places-research: Google Places Market Research Toolkit
+# Core dependencies
+
+# HTTP requests to Google Places API
+requests>=2.28.0
+
+# Environment configuration (.env file support)
+python-dotenv>=0.19.0
+
+# Enhanced type hints
+typing-extensions>=4.0.0
