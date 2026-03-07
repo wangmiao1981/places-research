@@ -818,6 +818,19 @@ class TestLLMClientEdgeCases(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             list(client.stream(system="s", user="u"))
 
+    def test_force_bedrock_bearer_empty_token_raises(self):
+        """force_bedrock_bearer=True with no token raises LLMError."""
+        env = {k: v for k, v in os.environ.items()
+               if k != "AWS_BEARER_TOKEN_BEDROCK"}
+        with patch.dict(os.environ, env, clear=True):
+            with patch.dict("sys.modules", {
+                "anthropic": _anthropic_mock,
+                "anthropic_bedrock": _anthropic_bedrock_mock,
+            }):
+                with self.assertRaises(LLMError) as ctx:
+                    LLMClient(force_bedrock_bearer=True)
+        self.assertIn("AWS_BEARER_TOKEN_BEDROCK", str(ctx.exception))
+
     def test_force_bedrock_unavailable_raises(self):
         """force_bedrock=True raises LLMError when AnthropicBedrock is not installed."""
         original = llm_client._BEDROCK_AVAILABLE

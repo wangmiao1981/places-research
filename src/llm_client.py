@@ -200,6 +200,10 @@ class LLMClient:
 
         if force_bedrock_bearer:
             token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK", "")
+            if not token:
+                raise LLMError(
+                    "force_bedrock_bearer=True but AWS_BEARER_TOKEN_BEDROCK is not set."
+                )
             region = os.environ.get("AWS_REGION", "us-west-2")
             self.auth_method = "bedrock_bearer"
             self._client = _BedrockBearerClient(bearer_token=token, region=region)
