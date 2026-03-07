@@ -47,7 +47,7 @@ class StatsAnalyzer:
                 buckets["2.0-3.0"] += 1
             elif r < 4.0:
                 buckets["3.0-4.0"] += 1
-            elif r <= 4.5:
+            elif r < 4.5:
                 buckets["4.0-4.5"] += 1
             else:
                 buckets["4.5-5.0"] += 1
@@ -97,7 +97,7 @@ class StatsAnalyzer:
 
         groups = defaultdict(list)
         for b in self.businesses:
-            grid = b.get("source_grid", "unknown")
+            grid = b.get("source_grid") or "unknown"
             groups[grid].append(b)
 
         cells = {}

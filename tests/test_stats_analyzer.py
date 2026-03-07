@@ -55,8 +55,8 @@ class TestRatingStats(unittest.TestCase):
         self.assertEqual(dist["1.0-2.0"], 0)
         self.assertEqual(dist["2.0-3.0"], 1)   # 2.5
         self.assertEqual(dist["3.0-4.0"], 2)   # 3.2, 3.8
-        self.assertEqual(dist["4.0-4.5"], 2)   # 4.2, 4.5
-        self.assertEqual(dist["4.5-5.0"], 4)   # 4.6, 4.8, 4.9, 5.0
+        self.assertEqual(dist["4.0-4.5"], 1)   # 4.2
+        self.assertEqual(dist["4.5-5.0"], 5)   # 4.5, 4.6, 4.8, 4.9, 5.0
 
     def test_rating_stats_empty(self):
         from stats_analyzer import StatsAnalyzer
@@ -374,12 +374,12 @@ class TestRatingBoundaryValues(unittest.TestCase):
         self.assertEqual(report["distribution"]["1.0-2.0"], 0)
 
     def test_rating_exactly_4_5(self):
-        """Rating of exactly 4.5 should go to '4.0-4.5' bucket (r <= 4.5)."""
+        """Rating of exactly 4.5 should go to '4.5-5.0' bucket (consistent < boundary)."""
         from stats_analyzer import StatsAnalyzer
         analyzer = StatsAnalyzer([{"rating": 4.5}])
         report = analyzer.compute_rating_stats()
-        self.assertEqual(report["distribution"]["4.0-4.5"], 1)
-        self.assertEqual(report["distribution"]["4.5-5.0"], 0)
+        self.assertEqual(report["distribution"]["4.5-5.0"], 1)
+        self.assertEqual(report["distribution"]["4.0-4.5"], 0)
 
     def test_rating_exactly_5_0(self):
         """Rating of exactly 5.0 should go to '4.5-5.0' bucket."""
