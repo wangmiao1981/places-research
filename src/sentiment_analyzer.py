@@ -4,6 +4,7 @@ Sentiment Analyzer — uses Claude to analyze business reviews.
 
 import json
 import re
+from pathlib import Path
 from typing import Any, Dict, List
 
 from llm_client import LLMClient
@@ -22,26 +23,46 @@ _EMPTY_RESULT = {
 }
 
 
+def _make_empty_result() -> dict:
+    """Return a new empty result dict with fresh lists each time."""
+    return {
+        "positive_themes": [],
+        "negative_themes": [],
+        "service_quality_patterns": [],
+        "unmet_needs": [],
+        "overall_sentiment": "unknown",
+    }
+
+
 def _extract_json(text: str) -> dict:
     """Parse JSON from LLM output, stripping markdown fences if present."""
     # Strip ```json ... ``` or ``` ... ``` wrappers
     stripped = re.sub(r"```(?:json)?\s*([\s\S]*?)\s*```", r"\1", text).strip()
     try:
-        return json.loads(stripped)
+        parsed = json.loads(stripped)
     except (json.JSONDecodeError, ValueError):
         # Try the original text as-is
         try:
-            return json.loads(text)
+            parsed = json.loads(text)
         except (json.JSONDecodeError, ValueError):
             return {}
+    # LLM may return a JSON array — extract first dict element if so
+    if isinstance(parsed, list):
+        for item in parsed:
+            if isinstance(item, dict):
+                return item
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    return parsed
 
 
 def _merge_results(results: List[dict]) -> dict:
     """Merge sentiment results from multiple batches."""
     if not results:
-        return dict(_EMPTY_RESULT)
+        return _make_empty_result()
     if len(results) == 1:
-        merged = dict(_EMPTY_RESULT)
+        merged = _make_empty_result()
         merged.update(results[0])
         return merged
 
@@ -94,10 +115,14 @@ class SentimentAnalyzer:
                 businesses_without_reviews += 1
             else:
                 businesses_with_reviews += 1
-                all_reviews.extend(reviews)
+                for review in reviews:
+                    if isinstance(review, dict):
+                        all_reviews.append(review.get("text", ""))
+                    else:
+                        all_reviews.append(review)
 
         if not all_reviews:
-            result = dict(_EMPTY_RESULT)
+            result = _make_empty_result()
             result["businesses_analyzed"] = 0
             result["businesses_without_reviews"] = businesses_without_reviews
             return result
@@ -123,7 +148,6 @@ class SentimentAnalyzer:
             raw = self._llm.call(
                 system="You are a market research analyst. Respond with valid JSON only.",
                 user=prompt,
-                model=DEFAULT_MODEL,
                 max_tokens=MAX_TOKENS,
             )
             parsed = _extract_json(raw)
@@ -131,7 +155,7 @@ class SentimentAnalyzer:
                 batch_results.append(parsed)
             else:
                 # Malformed response — append empty structure so schema is preserved
-                batch_results.append(dict(_EMPTY_RESULT))
+                batch_results.append(_make_empty_result())
 
         merged = _merge_results(batch_results)
         merged["businesses_analyzed"] = businesses_with_reviews
@@ -140,5 +164,6 @@ class SentimentAnalyzer:
 
     def save_report(self, report: dict, path: str) -> None:
         """Save report as JSON to the given path."""
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
