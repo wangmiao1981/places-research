@@ -127,11 +127,16 @@ def run_pipeline(
     if resume or stage:
         for s in STAGES:
             path = stage_artifact_path(output_dir, s)
-            if Path(path).exists() and s != "report":
-                try:
-                    artifacts[s] = _load_artifact(path)
-                except (json.JSONDecodeError, OSError):
-                    pass
+            if Path(path).exists():
+                if s == "report":
+                    # report is a Markdown file, not JSON — just record that it
+                    # exists so the resume logic can skip it.
+                    artifacts[s] = True
+                else:
+                    try:
+                        artifacts[s] = _load_artifact(path)
+                    except (json.JSONDecodeError, OSError):
+                        pass
 
     for current_stage in stages_to_run:
         # Resume: skip if artifact already exists
@@ -173,14 +178,13 @@ def _run_stage(
     llm_client, prompt_engine, web_searcher,
 ) -> Any:
     """Execute a single stage and return its result."""
-    _ensure_imports()
     user_profile = artifacts.get("interview", {})
     stats_report = artifacts.get("stats", {})
     sentiment_report = artifacts.get("sentiment", {})
     web_research = artifacts.get("web", {})
     strategy = artifacts.get("strategy", {})
     business_type = user_profile.get("business_type", "unknown")
-    location = user_profile.get("data_source", "unknown location")
+    location = user_profile.get("data_source") or "unknown location"
 
     if stage == "interview":
         interviewer = UserInterviewer(businesses)
@@ -191,14 +195,17 @@ def _run_stage(
         return analyzer.analyze()
 
     elif stage == "sentiment":
+        _ensure_imports()
         analyzer = SentimentAnalyzer(llm_client, prompt_engine)
         return analyzer.analyze(businesses, business_type, location)
 
     elif stage == "web":
+        _ensure_imports()
         researcher = WebResearcher(llm_client, web_searcher, prompt_engine)
         return researcher.research(business_type, location, user_profile)
 
     elif stage == "strategy":
+        _ensure_imports()
         analyzer = StrategyAnalyzer(llm_client, prompt_engine)
         return analyzer.analyze(
             business_type=business_type,
@@ -210,6 +217,7 @@ def _run_stage(
         )
 
     elif stage == "report":
+        _ensure_imports()
         generator = ReportGenerator(llm_client, prompt_engine)
         return generator.generate(
             business_type=business_type,
