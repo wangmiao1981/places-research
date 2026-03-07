@@ -1,0 +1,146 @@
+# GitHub Actions CI/CD Pipeline for places-research
+# Runs tests on every PR and push to main
+
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.9, '3.10', '3.11']
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml', '**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+        if [ -f "requirements-dev.txt" ]; then
+          pip install -r requirements-dev.txt
+        fi
+
+        if [ -f "pyproject.toml" ]; then
+          pip install -e ".[dev]" || pip install -e .
+        fi
+
+    - name: Create test environment file
+      run: |
+        echo "GOOGLE_MAPS_API_KEY=test_key_for_ci" > .env
+
+    - name: Run test suite
+      run: |
+        python -m unittest discover tests -v
+      env:
+        CI: true
+        PYTHONPATH: ${{ github.workspace }}/src
+
+    - name: Check code formatting
+      run: |
+        if command -v black &> /dev/null; then
+          black --check src/ tests/ || echo "Formatting issues found"
+        fi
+      continue-on-error: true
+
+    - name: Check import sorting
+      run: |
+        if command -v isort &> /dev/null; then
+          isort --check-only src/ tests/ || echo "Import sorting issues found"
+        fi
+      continue-on-error: true
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install bandit
+      run: pip install bandit[toml]
+
+    - name: Run security scan
+      run: |
+        bandit -r src/ -f json -o bandit-report.json || true
+        bandit -r src/ || echo "Security scan completed with warnings"
+
+    - name: Upload security scan results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-scan-results
+        path: bandit-report.json
+
+  build-check:
+    name: Build Package Check
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install build tools
+      run: pip install build twine
+
+    - name: Build package
+      run: python -m build
+
+    - name: Check package
+      run: python -m twine check dist/*
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: package-build
+        path: dist/
+
+  all-tests-passed:
+    name: All Tests Status
+    runs-on: ubuntu-latest
+    needs: [test, security-scan, build-check]
+    if: always()
+
+    steps:
+    - name: Check test results
+      run: |
+        if [ "${{ needs.test.result }}" != "success" ]; then
+          echo "Tests failed"
+          exit 1
+        fi
+        echo "All required tests passed"
