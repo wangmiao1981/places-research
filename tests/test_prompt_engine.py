@@ -189,5 +189,33 @@ class TestIntegration(unittest.TestCase):
         self.assertIn("Executive Summary", result)
 
 
+class TestPromptEngineEdgeCases(unittest.TestCase):
+
+    def setUp(self):
+        from prompt_engine import PromptEngine
+        self.tmpdir = tempfile.mkdtemp()
+        with open(os.path.join(self.tmpdir, "test.md"), "w") as f:
+            f.write("Hello {{name}}!")
+        self.engine = PromptEngine(prompts_dir=self.tmpdir)
+
+    def test_path_traversal_in_template_name_raises(self):
+        """Template names with .. should be rejected."""
+        with self.assertRaises(ValueError):
+            self.engine.load_template("../../etc/passwd")
+
+    def test_path_traversal_in_business_type_falls_back(self):
+        """Business type with .. should fall back to default, not traverse."""
+        os.makedirs(os.path.join(self.tmpdir, "business_types"))
+        with open(os.path.join(self.tmpdir, "business_types", "default.md"), "w") as f:
+            f.write("safe default")
+        result = self.engine.get_business_context("../../etc/passwd")
+        self.assertIn("safe default", result)
+
+    def test_extra_variables_silently_ignored(self):
+        """Extra variables not in template are silently ignored."""
+        result = self.engine.render("test", {"name": "Alice", "extra": "ignored"})
+        self.assertEqual(result, "Hello Alice!")
+
+
 if __name__ == "__main__":
     unittest.main()
