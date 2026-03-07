@@ -15,7 +15,12 @@ import sys
 import tempfile
 import unittest
 
+from dotenv import load_dotenv
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+# Load .env file so API keys are available without manual export
+load_dotenv()
 
 _HAS_ANTHROPIC_KEY = bool(os.environ.get("ANTHROPIC_API_KEY"))
 _HAS_BEARER = bool(os.environ.get("AWS_BEARER_TOKEN_BEDROCK"))
