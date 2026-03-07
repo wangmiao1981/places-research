@@ -7,6 +7,7 @@ then synthesizes them with an LLM via PromptEngine.
 
 import datetime
 import json
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from llm_client import LLMClient
@@ -88,6 +89,7 @@ class WebResearcher:
 
     def save_report(self, report: dict, path: str) -> None:
         """Save report as JSON to the given file path."""
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as fh:
             json.dump(report, fh, ensure_ascii=False, indent=2)
 
