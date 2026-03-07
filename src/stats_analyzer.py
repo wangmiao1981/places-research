@@ -112,9 +112,14 @@ class StatsAnalyzer:
 
         sorted_cells = sorted(cells.items(), key=lambda x: x[1]["count"], reverse=True)
         densest = [{"grid": g, "count": c["count"]} for g, c in sorted_cells[:3]]
-        sparsest = [{"grid": g, "count": c["count"]} for g, c in sorted_cells[-3:]]
-
-        return {"cells": cells, "densest": densest, "sparsest": sparsest}
+        # Sparsest: ascending order, exclude grids already in densest
+        densest_grids = {d["grid"] for d in densest}
+        sparsest_candidates = [
+            {"grid": g, "count": c["count"]}
+            for g, c in reversed(sorted_cells)
+            if g not in densest_grids
+        ][:3]
+        return {"cells": cells, "densest": densest, "sparsest": sparsest_candidates}
 
     def compute_operating_hours(self) -> Dict[str, Any]:
         with_hours = []

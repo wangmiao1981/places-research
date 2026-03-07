@@ -133,9 +133,34 @@ class TestGeographicDensity(unittest.TestCase):
     def test_sparsest_cells(self):
         report = self.analyzer.compute_geographic_density()
         sparsest = report["sparsest"]
-        # grid_1_1 and grid_2_2 both have 3
-        counts = [s["count"] for s in sparsest]
-        self.assertIn(3, counts)
+        # With only 3 grids, all are in densest, so sparsest is empty (no overlap)
+        self.assertEqual(sparsest, [])
+
+    def test_sparsest_excludes_densest(self):
+        """Sparsest does not overlap with densest entries."""
+        from stats_analyzer import StatsAnalyzer
+        # Create 5 grids with varying counts to test proper dedup
+        businesses = []
+        for i, (grid, count) in enumerate([
+            ("g1", 10), ("g2", 8), ("g3", 5), ("g4", 3), ("g5", 1),
+        ]):
+            for j in range(count):
+                businesses.append({
+                    "source_grid": grid,
+                    "latitude": 37.0 + i * 0.01,
+                    "longitude": -122.0 + i * 0.01,
+                })
+        analyzer = StatsAnalyzer(businesses)
+        report = analyzer.compute_geographic_density()
+        densest_grids = {d["grid"] for d in report["densest"]}
+        sparsest_grids = {s["grid"] for s in report["sparsest"]}
+        self.assertEqual(densest_grids & sparsest_grids, set())
+        # Sparsest should be in ascending count order
+        if len(report["sparsest"]) >= 2:
+            self.assertLessEqual(
+                report["sparsest"][0]["count"],
+                report["sparsest"][1]["count"],
+            )
 
     def test_cell_centroids(self):
         report = self.analyzer.compute_geographic_density()
