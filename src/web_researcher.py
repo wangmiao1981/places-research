@@ -5,6 +5,7 @@ Uses WebSearcher to fetch search results across multiple market research queries
 then synthesizes them with an LLM via PromptEngine.
 """
 
+import datetime
 import json
 from typing import Dict, List, Optional
 
@@ -99,7 +100,7 @@ class WebResearcher:
         return [
             f"{business_type} commercial rent {location}",
             f"{business_type} zoning regulations {location}",
-            f"{business_type} industry trends 2025",
+            f"{business_type} industry trends {datetime.date.today().year}",
             f"best {business_type} {location} reviews",
             f"{location} demographics foot traffic",
         ]
@@ -134,6 +135,9 @@ class WebResearcher:
                 inner = inner[:-1]
             stripped = "\n".join(inner)
         try:
-            return json.loads(stripped)
+            result = json.loads(stripped)
+            if not isinstance(result, dict):
+                return {}
+            return result
         except (json.JSONDecodeError, ValueError):
             return {}
