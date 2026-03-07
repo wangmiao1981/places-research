@@ -65,8 +65,25 @@ class StrategyAnalyzer:
             max_tokens=4096,
         )
 
+        return self._parse_response(response)
+
+    @staticmethod
+    def _parse_response(text: str) -> dict:
+        """Parse JSON from LLM response, stripping markdown fences if present."""
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            lines = stripped.splitlines()
+            inner = lines[1:] if len(lines) > 1 else lines
+            if inner and inner[-1].strip().startswith("```"):
+                inner = inner[:-1]
+            stripped = "\n".join(inner)
         try:
-            return json.loads(response)
+            result = json.loads(stripped)
+            # json.loads can return any JSON type (list, str, int, etc.);
+            # we only accept dicts as valid strategy responses.
+            if not isinstance(result, dict):
+                return {}
+            return result
         except (json.JSONDecodeError, ValueError):
             return {}
 
@@ -77,6 +94,10 @@ class StrategyAnalyzer:
             report: The strategy report dict to save.
             path: Absolute path to the output JSON file. Parent directories
                   are created automatically if they do not exist.
+
+        Note: Each module keeps its own save_report for now as a design
+        decision — it avoids a shared I/O utility and keeps modules
+        independently usable without the orchestrator.
         """
         output_path = Path(path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
