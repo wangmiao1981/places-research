@@ -330,5 +330,79 @@ class TestSaveReport(unittest.TestCase):
             self.assertTrue(os.path.exists(path))
 
 
+# ---------------------------------------------------------------------------
+# Proactive bug-catching tests
+# ---------------------------------------------------------------------------
+
+class TestParseTimeEdgeCases(unittest.TestCase):
+    def setUp(self):
+        from stats_analyzer import StatsAnalyzer
+        self.analyzer = StatsAnalyzer([])
+
+    def test_midnight_12am(self):
+        """12:00 AM should parse to 0.0."""
+        self.assertAlmostEqual(self.analyzer._parse_time("12:00 AM"), 0.0)
+
+    def test_noon_12pm(self):
+        """12:00 PM should parse to 12.0."""
+        self.assertAlmostEqual(self.analyzer._parse_time("12:00 PM"), 12.0)
+
+    def test_9am(self):
+        """9:00 AM should parse to 9.0."""
+        self.assertAlmostEqual(self.analyzer._parse_time("9:00 AM"), 9.0)
+
+    def test_9pm(self):
+        """9:00 PM should parse to 21.0."""
+        self.assertAlmostEqual(self.analyzer._parse_time("9:00 PM"), 21.0)
+
+    def test_invalid_time_returns_none(self):
+        """Invalid time string returns None."""
+        self.assertIsNone(self.analyzer._parse_time("invalid"))
+
+    def test_time_with_minutes(self):
+        """9:30 AM should parse to 9.5."""
+        self.assertAlmostEqual(self.analyzer._parse_time("9:30 AM"), 9.5)
+
+
+class TestRatingBoundaryValues(unittest.TestCase):
+    def test_rating_exactly_2_0(self):
+        """Rating of exactly 2.0 should go to '2.0-3.0' bucket."""
+        from stats_analyzer import StatsAnalyzer
+        analyzer = StatsAnalyzer([{"rating": 2.0}])
+        report = analyzer.compute_rating_stats()
+        self.assertEqual(report["distribution"]["2.0-3.0"], 1)
+        self.assertEqual(report["distribution"]["1.0-2.0"], 0)
+
+    def test_rating_exactly_4_5(self):
+        """Rating of exactly 4.5 should go to '4.0-4.5' bucket (r <= 4.5)."""
+        from stats_analyzer import StatsAnalyzer
+        analyzer = StatsAnalyzer([{"rating": 4.5}])
+        report = analyzer.compute_rating_stats()
+        self.assertEqual(report["distribution"]["4.0-4.5"], 1)
+        self.assertEqual(report["distribution"]["4.5-5.0"], 0)
+
+    def test_rating_exactly_5_0(self):
+        """Rating of exactly 5.0 should go to '4.5-5.0' bucket."""
+        from stats_analyzer import StatsAnalyzer
+        analyzer = StatsAnalyzer([{"rating": 5.0}])
+        report = analyzer.compute_rating_stats()
+        self.assertEqual(report["distribution"]["4.5-5.0"], 1)
+
+    def test_rating_0_included_in_stats(self):
+        """Rating of 0.0 passes 'is not None' filter and goes to '1.0-2.0'."""
+        from stats_analyzer import StatsAnalyzer
+        analyzer = StatsAnalyzer([{"rating": 0.0}])
+        report = analyzer.compute_rating_stats()
+        self.assertEqual(report["with_rating"], 1)
+        self.assertEqual(report["distribution"]["1.0-2.0"], 1)
+
+    def test_single_rating_std_dev_is_zero(self):
+        """Single rating should produce std_dev of 0."""
+        from stats_analyzer import StatsAnalyzer
+        analyzer = StatsAnalyzer([{"rating": 4.0}])
+        report = analyzer.compute_rating_stats()
+        self.assertEqual(report["std_dev"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

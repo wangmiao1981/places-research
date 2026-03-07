@@ -3,7 +3,7 @@ import re
 import statistics
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 
 class StatsAnalyzer:
@@ -210,7 +210,7 @@ class StatsAnalyzer:
                     result[day] = None
         return result
 
-    def _parse_time(self, time_str: str) -> float:
+    def _parse_time(self, time_str: str) -> Optional[float]:
         """Parse time string like '9:00 AM' into 24h float (9.0)."""
         # Remove unicode whitespace
         cleaned = re.sub(r"[\u202f\u2009\u00a0]", " ", time_str).strip()
