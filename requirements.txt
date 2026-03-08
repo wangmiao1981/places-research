@@ -12,3 +12,6 @@ typing-extensions>=4.0.0
 
 # Web search for market research
 tavily-python>=0.3.0
+
+# Anthropic Claude SDK (used by LLMClient)
+anthropic>=0.20.0
