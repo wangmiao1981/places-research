@@ -1,0 +1,94 @@
+# Integration Tests for places-research
+# Runs tests against real LLM and search APIs using repository secrets.
+#
+# COST ESTIMATE: Each run makes ~5-10 LLM calls using Claude Sonnet.
+# Estimated cost: ~$0.50-1.00 per run. Scheduled weekly (Monday 6am UTC)
+# to keep costs manageable. Trigger manually via workflow_dispatch as needed.
+
+name: Integration Tests
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Weekly on Monday at 6am UTC (save costs)
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to test'
+        default: 'main'
+
+jobs:
+  integration-test:
+    name: Integration Tests (Real APIs)
+    runs-on: ubuntu-latest
+    # Only run if secrets are available (skip for forks)
+    if: github.repository == 'wangmiao1981/places-research'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event_name == 'workflow_dispatch' && inputs.branch || 'main' }}
+
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip dependencies
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run integration tests
+      env:
+        ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+        AWS_BEARER_TOKEN_BEDROCK: ${{ secrets.AWS_BEARER_TOKEN_BEDROCK }}
+        AWS_REGION: ${{ secrets.AWS_REGION }}
+        PYTHONPATH: src
+      run: |
+        python -m pytest tests/test_integration_llm_stages.py -v --tb=short \
+          --junit-xml=integration-test-results.xml
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: integration-test-results
+        path: integration-test-results.xml
+
+    - name: Create GitHub issue on failure
+      if: failure()
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+          const branch = context.eventName === 'workflow_dispatch'
+            ? (context.payload.inputs && context.payload.inputs.branch) || 'main'
+            : 'main (scheduled)';
+          await github.rest.issues.create({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            title: `Integration tests failed on ${branch}`,
+            body: [
+              '## Integration Test Failure',
+              '',
+              `**Branch:** \`${branch}\``,
+              `**Workflow run:** ${runUrl}`,
+              `**Triggered by:** ${context.eventName}`,
+              '',
+              'The weekly integration test run against real APIs failed.',
+              'Please investigate the run logs and resolve any failures.',
+              '',
+              '> This issue was created automatically by the Integration Tests workflow.',
+            ].join('\n'),
+            labels: ['bug', 'integration-tests'],
+          });
