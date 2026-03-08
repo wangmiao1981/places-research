@@ -111,12 +111,15 @@ class WebSearcher:
         resolved_key = api_key or os.environ.get("TAVILY_API_KEY")
         if not resolved_key:
             raise EnvironmentError(
-                "Tavily API key not found.\n"
-                "Set the TAVILY_API_KEY environment variable or pass api_key= "
-                "directly to WebSearcher().\n\n"
-                "To obtain a key visit https://tavily.com and sign up for a "
-                "free account.\n"
-                "Then add to your shell:  export TAVILY_API_KEY='tvly-...'"
+                "TAVILY_API_KEY is not set.\n\n"
+                "The web research stage requires a Tavily API key.  "
+                "You can provide it in one of two ways:\n"
+                "  1. Set the environment variable:  "
+                "export TAVILY_API_KEY='tvly-...'\n"
+                "  2. Pass it directly:  WebSearcher(api_key='tvly-...')\n\n"
+                "To obtain a free key, sign up at https://tavily.com\n\n"
+                "If you do not have a key, omit the --web stage or set "
+                "TAVILY_API_KEY to skip web research gracefully."
             )
 
         self._client = TavilyClient(api_key=resolved_key)
