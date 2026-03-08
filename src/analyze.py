@@ -175,6 +175,17 @@ def run_pipeline(
             (total_reviews + REVIEWS_PER_BATCH - 1) // REVIEWS_PER_BATCH
             if total_reviews else 0
         )
+        # Best-effort business type / location from existing interview artifact
+        _profile = {}
+        if resume or stage:
+            _ipath = stage_artifact_path(output_dir, "interview")
+            if Path(_ipath).exists():
+                try:
+                    _profile = _load_artifact(_ipath)
+                except (json.JSONDecodeError, OSError):
+                    pass
+        _btype = _profile.get("business_type", "unknown")
+        _loc = _profile.get("data_source") or "unknown location"
 
         for s in stages_to_show:
             if s == "interview":
@@ -187,7 +198,7 @@ def run_pipeline(
                     f"in {batch_count} batch(es)"
                 )
             elif s == "web":
-                print("  [dry-run] web: would search for {business_type} in {location}")
+                print(f"  [dry-run] web: would search for {_btype} in {_loc}")
             elif s == "strategy":
                 print("  [dry-run] strategy: would analyze with all prior stage data")
             elif s == "report":
@@ -338,6 +349,10 @@ def _run_stage(
         return analyzer.analyze(businesses, business_type, location)
 
     elif stage == "web":
+        if web_searcher is None:
+            raise EnvironmentError(
+                "Web research unavailable: TAVILY_API_KEY is not configured."
+            )
         _ensure_imports()
         researcher = WebResearcher(llm_client, web_searcher, prompt_engine)
         return researcher.research(business_type, location, user_profile)
@@ -392,39 +407,19 @@ def main() -> None:
         print(f"Token budget: {args.max_tokens} tokens")
     print()
 
-    if args.dry_run:
-        from sentiment_analyzer import REVIEWS_PER_BATCH
-        stages_to_show = [args.stage] if args.stage else list(STAGES)
-        total_reviews = sum(len(b.get("reviews") or []) for b in businesses)
-        batch_count = (
-            (total_reviews + REVIEWS_PER_BATCH - 1) // REVIEWS_PER_BATCH
-            if total_reviews else 0
-        )
-        for s in stages_to_show:
-            if s == "interview":
-                print(f"  [dry-run] interview: would interview with {len(businesses)} businesses")
-            elif s == "stats":
-                print(f"  [dry-run] stats: would analyze {len(businesses)} businesses")
-            elif s == "sentiment":
-                print(
-                    f"  [dry-run] sentiment: would analyze {total_reviews} reviews "
-                    f"in {batch_count} batch(es)"
-                )
-            elif s == "web":
-                print("  [dry-run] web: would search for {business_type} in {location}")
-            elif s == "strategy":
-                print("  [dry-run] strategy: would analyze with all prior stage data")
-            elif s == "report":
-                print("  [dry-run] report: would generate final report")
-        sys.exit(0)
-
     from llm_client import LLMClient
     from prompt_engine import PromptEngine
     from web_searcher import WebSearcher
 
     llm_client = LLMClient()
     prompt_engine = PromptEngine()
-    web_searcher = WebSearcher()
+
+    # WebSearcher may fail if TAVILY_API_KEY is missing — this is non-fatal
+    # since the pipeline treats web stage failures gracefully.
+    try:
+        web_searcher = WebSearcher()
+    except EnvironmentError:
+        web_searcher = None
 
     result = run_pipeline(
         businesses=businesses,
@@ -434,9 +429,12 @@ def main() -> None:
         llm_client=llm_client,
         prompt_engine=prompt_engine,
         web_searcher=web_searcher,
-        dry_run=False,
+        dry_run=args.dry_run,
         max_tokens=args.max_tokens,
     )
+
+    if result.get("dry_run"):
+        sys.exit(0)
 
     # Print results
     print()
