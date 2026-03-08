@@ -92,13 +92,12 @@ jobs:
 
     - name: Scan for secrets in current tree
       run: |
-        # Audit against baseline — only NEW secrets trigger failure
         detect-secrets scan --all-files \
           --exclude-files '\.env$' \
           --exclude-files '\.git/' \
+          --exclude-files '\.secrets\.baseline$' \
+          --exclude-files '\.pytest_cache/' \
           > secrets-report.json
-        detect-secrets audit --report --baseline .secrets.baseline \
-          || true
         # Compare scan vs baseline to find NEW secrets
         python3 << 'PYEOF'
         import json, sys
@@ -108,18 +107,17 @@ jobs:
         with open('.secrets.baseline') as f:
             baseline = json.load(f)
 
-        # Collect baseline hashes that are marked as false positives
+        # Collect baseline hashes marked as false positives (path + hash)
         known = set()
         for path, findings in baseline.get('results', {}).items():
             for f in findings:
                 if not f.get('is_secret', True):
-                    known.add((path, f['hashed_secret'], f['line_number']))
+                    known.add((path, f['hashed_secret']))
 
         new_secrets = []
         for path, findings in scan.get('results', {}).items():
             for f in findings:
-                key = (path, f['hashed_secret'], f['line_number'])
-                if key not in known:
+                if (path, f['hashed_secret']) not in known:
                     new_secrets.append(f"  {path}:{f['line_number']} - {f['type']}")
 
         if new_secrets:
