@@ -88,7 +88,7 @@ jobs:
         python-version: '3.11'
 
     - name: Install detect-secrets
-      run: pip install detect-secrets
+      run: pip install detect-secrets==1.5.0
 
     - name: Scan for secrets in current tree
       run: |
@@ -140,10 +140,15 @@ jobs:
             "Generic Secret Key": r"sk-[a-zA-Z0-9]{40,}",
         }
 
-        diff = subprocess.run(
+        result = subprocess.run(
             ["git", "log", "--all", "-p", "--diff-filter=ACMR"],
             capture_output=True, text=True, timeout=120
-        ).stdout
+        )
+        if result.returncode != 0:
+            print(f"FAILED: git log exited with code {result.returncode}")
+            print(result.stderr[:500] if result.stderr else "(no stderr)")
+            sys.exit(1)
+        diff = result.stdout
 
         found = []
         for name, pattern in patterns.items():
