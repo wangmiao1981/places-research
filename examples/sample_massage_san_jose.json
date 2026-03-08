@@ -1,0 +1,536 @@
+[
+  {
+    "place_id": "ChIJBSksVgo1joARcwDB_t9eWYo",
+    "name": "Flamingo Beauty Spa",
+    "latitude": 37.2745927,
+    "longitude": -121.9343048,
+    "address": "2617 S Bascom Ave, Campbell, CA 95008, USA",
+    "rating": 5,
+    "source_grid": "grid_0_0",
+    "total_ratings": 4,
+    "reviews": [
+      {
+        "author_name": "Michael Johnson",
+        "author_url": "https://www.google.com/maps/contrib/101992737458028425832/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWzyykCuQOtA_jjeFQV5m4xYa8_A5xwoa5VN8O0D6uJm1hqybE=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a month ago",
+        "text": "I’ve been searching for a clean, legitimate spa with high-quality services for a long time, and I believe I’ve finally found it. Flamingo Spa is under new management with a strong focus on quality and customer care. I had both a facial and a deep tissue massage, and the results were fantastic. This is officially my new go-to spa, and I highly recommend it.",
+        "time": 1770021634,
+        "translated": false
+      },
+      {
+        "author_name": "Gerald Rosario",
+        "author_url": "https://www.google.com/maps/contrib/100052446749846839218/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocLD1A5OwKZOakm2JUVO2SF2iBh_6YQoQlaeGJeewdMfVx9sYg=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a month ago",
+        "text": "Great experience very professional had a great massage. Nice deep tissue massage.",
+        "time": 1768783124,
+        "translated": false
+      },
+      {
+        "author_name": "Sam",
+        "author_url": "https://www.google.com/maps/contrib/118311002447223752623/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocLcuITQUm5cOaECa2xlMT__hIb7xm0i-I1506xnkljho7918Q=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a month ago",
+        "text": "The environment is elegant and clean, the technicians provide excellent professional service, and there are plenty of free parking spaces.",
+        "time": 1768781176,
+        "translated": false
+      }
+    ],
+    "website": null,
+    "phone_number": "(669) 288-3910",
+    "opening_hours": [
+      "Monday: 10:00 AM – 9:00 PM",
+      "Tuesday: 10:00 AM – 9:00 PM",
+      "Wednesday: 10:00 AM – 9:00 PM",
+      "Thursday: 10:00 AM – 9:00 PM",
+      "Friday: 10:00 AM – 9:00 PM",
+      "Saturday: 10:00 AM – 9:00 PM",
+      "Sunday: 10:00 AM – 9:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJcV_287szjoARF7OsKaHxApM",
+    "name": "Tubtim Thai Spa",
+    "latitude": 37.2927624,
+    "longitude": -121.889217,
+    "address": "2098 Lincoln Ave, San Jose, CA 95125, USA",
+    "rating": 5,
+    "source_grid": "grid_0_1",
+    "total_ratings": 139,
+    "reviews": [
+      {
+        "author_name": "Yaya Ruengjittaveekul",
+        "author_url": "https://www.google.com/maps/contrib/106743660420622005569/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJVpXpC-_wVo0dLhUust6_5nxyfZNQ8sAXiXmdjg3SgLVPmFA=s128-c0x00000000-cc-rp-mo-ba4",
+        "rating": 5,
+        "relative_time_description": "2 months ago",
+        "text": "I just found new nice massage place in San Jose. The place is very nice and clean. Massage was amazing. After I got 2 hours massage I feel like I get new body. Tysm ☺️ Definitely come back.",
+        "time": 1766821592,
+        "translated": false
+      },
+      {
+        "author_name": "Taylor Won",
+        "author_url": "https://www.google.com/maps/contrib/115733684518493151654/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWilWdIAPqkquBeUhwpoLjeqQOvuJBX9_sbqVaoL-2nnceBWf0-Tg=s128-c0x00000000-cc-rp-mo-ba3",
+        "rating": 5,
+        "relative_time_description": "2 months ago",
+        "text": "Came here for a couple's massage after receiving a gift card from my brother. The shop had a really nice interior with a clean lobby and bathroom. The front desk person was very polite, friendly, and professional.\nWe got Tubtim signature massage by Tina and Pam, which included hot stone and oil massages. You can choose the pressure level and the areas that you'd like them to focus on. The room had a very soothing atmosphere with the calm music and dim lighting. The massage was great! We both really enjoyed the massage and left with lighter and softer shoulders and back. Very happy with the experience and definitely will be back soon!",
+        "time": 1766802838,
+        "translated": false
+      },
+      {
+        "author_name": "Kit Sittigorngun",
+        "author_url": "https://www.google.com/maps/contrib/106420543023708086279/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVQtkvcp-7BlmOOXi-830ncs667BfrvStZVq9RLle5zIm3XFP2X=s128-c0x00000000-cc-rp-mo-ba5",
+        "rating": 5,
+        "relative_time_description": "3 months ago",
+        "text": "My friend recommended this place. I had lower back and shoulder pain and Tina gave me a tradisetional Thai massage. I felt relieved and relaxed. I will go back for herbal massage. I love this place. super recommend.",
+        "time": 1765008238,
+        "translated": false
+      }
+    ],
+    "website": "https://www.tubtimthaispa.com/",
+    "phone_number": "(408) 819-7992",
+    "opening_hours": [
+      "Monday: 11:00 AM – 8:00 PM",
+      "Tuesday: 11:00 AM – 8:00 PM",
+      "Wednesday: 11:00 AM – 8:00 PM",
+      "Thursday: 11:00 AM – 8:00 PM",
+      "Friday: 11:00 AM – 8:00 PM",
+      "Saturday: 10:00 AM – 8:00 PM",
+      "Sunday: 10:00 AM – 8:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJfx4EilczjoARvhXVHepYaKo",
+    "name": "Touch Of Serenity",
+    "latitude": 37.3073253,
+    "longitude": -121.9000863,
+    "address": "1174 Lincoln Ave, San Jose, CA 95125, USA",
+    "rating": 5,
+    "source_grid": "grid_1_0",
+    "total_ratings": 4,
+    "reviews": [
+      {
+        "author_name": "Lizz Thatvegan",
+        "author_url": "https://www.google.com/maps/contrib/106279503214728802915/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVx2FCWI0LTiTAlku7VEtAQYeNy7NplE5s3tc0lzbH5O5zMNcg=s128-c0x00000000-cc-rp-mo-ba3",
+        "rating": 5,
+        "relative_time_description": "7 years ago",
+        "text": "Such a healing experience!!! Hella good vibes. I'm so grateful I went to see Sarah. I was nervous because I have old sports injuries and have had many negative experiences with massage therapists. Sarah was perfect! She followed exactly what I asked. She checked in with me to make sure the pressure was comfortable. I loved every second of it!",
+        "time": 1526532495,
+        "translated": false
+      },
+      {
+        "author_name": "Jonnie G",
+        "author_url": "https://www.google.com/maps/contrib/102111706831277906653/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWPdImZrRpm6w_Qcu2qbQm3vFJMmB0h-PMYRvfxRGjz1LV1kb3TiQ=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "7 years ago",
+        "text": "Amazing energy and bodywork by Sarah. She asked about issues I wanted to concentrate on. As she worked, she asked about pressure she was using. She used hot stones-oh, those were amazing! I felt like a noodle when my hour massage was done. Her offer of water at the end was another example of her holistic approach. Thank you! I will return soon!",
+        "time": 1534368734,
+        "translated": false
+      },
+      {
+        "author_name": "Robert Baldacci",
+        "author_url": "https://www.google.com/maps/contrib/113541380071131296071/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIrPqDq6BTV48I0xwrH_aX0xrbfZv1VCJelWUw4K0xRZIdvXA=s128-c0x00000000-cc-rp-mo-ba4",
+        "rating": 5,
+        "relative_time_description": "2 years ago",
+        "text": "Sarah is amazing!",
+        "time": 1693154242,
+        "translated": false
+      }
+    ],
+    "website": "https://tos.massagetherapy.com/",
+    "phone_number": "(408) 394-4318",
+    "opening_hours": [
+      "Monday: Closed",
+      "Tuesday: Closed",
+      "Wednesday: Closed",
+      "Thursday: Closed",
+      "Friday: 11:30 AM – 8:00 PM",
+      "Saturday: Closed",
+      "Sunday: Closed"
+    ]
+  },
+  {
+    "place_id": "ChIJW-_ME3nNj4AREx6kMa6BnDU",
+    "name": "Skin By Nique",
+    "latitude": 37.3090979,
+    "longitude": -121.901215,
+    "address": "1090 Lincoln Ave, San Jose, CA 95125, USA",
+    "rating": 5,
+    "source_grid": "grid_1_2",
+    "total_ratings": 75,
+    "reviews": [
+      {
+        "author_name": "Joy Johnson",
+        "author_url": "https://www.google.com/maps/contrib/108738020930729248043/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWBX_NQhwGnWY3RAJzNhTF2WMpJXe3qa1Jm8BwQE631N3S95os-=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a month ago",
+        "text": "I first found Monique while searching for an aesthetician for my teenage son. My aesthetician at the time recommended the Face Reality line, and Monique was the closest Acne Expert to us, and wow, what a find! I was so impressed with how she completely transformed my son’s skin that I decided to book a Collagen Lifting Anti-Aging Facial for myself. I’ve had facials at 5-star spas around the world, and I would absolutely put Monique on that same level. I left with my skin GLOWING and feeling incredibly relaxed and rejuvenated. It was truly an exceptional experience, and I’ll definitely be making regular appointments as part of my self-care routine.",
+        "time": 1768007604,
+        "translated": false
+      },
+      {
+        "author_name": "Maxine Magahiz",
+        "author_url": "https://www.google.com/maps/contrib/113425453017197691220/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXym08mB75MCGKui7ZYhxr6ezJvqqofNEowir0YxcJ6meHTlTfe=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "5 months ago",
+        "text": "I’ve been seeing Monique at Skin by Nique since April for acne facials, and my skin has completely transformed; clearer, smoother, and more even-toned. She’s incredibly knowledgeable and always explains what each product and process does, which I really appreciate. She’s introduced me to techniques and products I’d never tried before that have worked wonders. On top of her expertise, Monique’s warmth and passion for skincare make every visit a great experience. I’m excited to try more of her facials and treatments based on my results so far. Highly recommend!",
+        "time": 1759533191,
+        "translated": false
+      },
+      {
+        "author_name": "katelynn",
+        "author_url": "https://www.google.com/maps/contrib/113257700133211829310/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUf8ksR6fZ2vXgeJxaGNRCa8OV8kFAijABtLl6VPAd4YdvjACI6=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "2 months ago",
+        "text": "Monique was so kind and helpful throughout the service. She explained each step clearly and checked in to make sure I was feeing okay. My skin is feeling so much softer and smoother after her service. I recommend her to everyone! She is amazing!",
+        "time": 1767377122,
+        "translated": false
+      }
+    ],
+    "website": "https://www.skinbynique.com/",
+    "phone_number": "(669) 223-1432",
+    "opening_hours": [
+      "Monday: Closed",
+      "Tuesday: 10:00 AM – 7:00 PM",
+      "Wednesday: 10:00 AM – 7:00 PM",
+      "Thursday: 10:00 AM – 7:00 PM",
+      "Friday: 10:00 AM – 7:00 PM",
+      "Saturday: 11:00 AM – 6:00 PM",
+      "Sunday: Closed"
+    ]
+  },
+  {
+    "place_id": "ChIJ0WFLKRHLj4AR-7SOh_zxlSE",
+    "name": "Bamboo Healthcare Spa Inc",
+    "latitude": 37.3454405,
+    "longitude": -121.9149987,
+    "address": "871 Coleman Ave, San Jose, CA 95110, USA",
+    "rating": 5,
+    "source_grid": "grid_4_0",
+    "total_ratings": 91,
+    "reviews": [
+      {
+        "author_name": "Ivette Bonilla",
+        "author_url": "https://www.google.com/maps/contrib/112908320403467268032/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjXQBdagFGI-5CynPVerV9E8lf_0gum4Zokbmees8jC_AOjPgMmi=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a year ago",
+        "text": "I love this place! Everyone is so welcoming and friendly. Yudi is so thoughtful and genuinely cares about her clients.\n\nI have been a client for years and her prices are very much affordable.\n\nEveryone asks me what my skincare routine is and even my Facebook memories make me look older! And it's all thanks to Bamboo Healthcare Spa!!!\n\nI highly recommend this place as your go to!",
+        "time": 1733201307,
+        "translated": false
+      },
+      {
+        "author_name": "Jennifer pena",
+        "author_url": "https://www.google.com/maps/contrib/103829215480840340882/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocK7bh84zEq6Yrs-DBvE0A8u8H4AomhS5GdFcVaJf-bIk10h1A=s128-c0x00000000-cc-rp-mo-ba2",
+        "rating": 5,
+        "relative_time_description": "a year ago",
+        "text": "I been here a couple of times for lip fillers and for massages post op for my surgery and I highly recommend them they are very attentive and helpful with everything. They made sure I was wearing the right size post op garments helped me a lot on my post op journey. For the lip fillers they make sure they never look over done and the numbing blocks are the best. I never went anywhere else where I have this little bruising swelling and pain after getting lip fillers",
+        "time": 1724099792,
+        "translated": false
+      },
+      {
+        "author_name": "Yahaira Pantoja",
+        "author_url": "https://www.google.com/maps/contrib/104448846758342467145/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJ8D1rniCWrYQzD2slv_wwdAh2_Apm8REFepNJeQ2TN1perig=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a year ago",
+        "text": "I have been coming for about 4 months For PRP treatments. Plasma (PrP) has significantly improved my hair growth with my androgenetic alopecia. Despite the short time I have seen amazing results with hair growth and density. To top it all off I have received amazing customer service at every appointment. Bamboo Healthcare Spa Inc truly makes you feel safe, confident, and hope. Definitely recommend coming from a patient ☺️.",
+        "time": 1734212274,
+        "translated": false
+      }
+    ],
+    "website": "https://bambu-magic-spa.square.site/",
+    "phone_number": "(408) 449-8672",
+    "opening_hours": [
+      "Monday: 9:00 AM – 6:00 PM",
+      "Tuesday: 9:00 AM – 6:00 PM",
+      "Wednesday: 9:00 AM – 6:00 PM",
+      "Thursday: 9:00 AM – 6:00 PM",
+      "Friday: 9:00 AM – 6:00 PM",
+      "Saturday: 9:00 AM – 5:00 PM",
+      "Sunday: Closed"
+    ]
+  },
+  {
+    "place_id": "ChIJM64u1vY0joARS-WgnF9I1_c",
+    "name": "BAMBOO FOOT RELAXATION",
+    "latitude": 37.2731842,
+    "longitude": -121.9321941,
+    "address": "2684 Union Ave, San Jose, CA 95124, USA",
+    "rating": 4,
+    "source_grid": "grid_0_0",
+    "total_ratings": 102,
+    "reviews": [
+      {
+        "author_name": "Stephanie Merlos-Andrews",
+        "author_url": "https://www.google.com/maps/contrib/116103594850383457281/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUkSc6n0d2ffy9QqOUzsAfJItlQWrLHvY7gUHkweHtuseqTlh0=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "3 weeks ago",
+        "text": "I’ve had many good massages here, as someone with chronic neck pain I know when I come here they will really provide deep, strong massages that get rid of my pain. Always very nice and I try to see Joe whenever I can, although most of the masseuses are quite strong if you request that. Great massages and great value!",
+        "time": 1770510789,
+        "translated": false
+      },
+      {
+        "author_name": "Ron Morgan",
+        "author_url": "https://www.google.com/maps/contrib/103586910636397902888/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjVU6AZVUuTAbTSgHnW4hpk62bX31HQnXr5vdU_yfHrYM1vew4k=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a month ago",
+        "text": "I've been coming to this massage place for a long time. A lady named Grace!!!...is really good. She is a expert. She's really good. With foot massage and also good at full body massage.I usually do both Grace is Graceful... A true Professional !!!",
+        "time": 1768707797,
+        "translated": false
+      },
+      {
+        "author_name": "Matthew R",
+        "author_url": "https://www.google.com/maps/contrib/100818323126583282096/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIFmZyMFJYoJdDyYl4IGNnNynCHGnRZzO4UuxmFVpaGFNaTfzM=s128-c0x00000000-cc-rp-mo-ba3",
+        "rating": 4,
+        "relative_time_description": "a week ago",
+        "text": "Very nice! I took my niece here and we both enjoyed the experience. It was reasonably priced at $50 for an hour, and worth every penny! Thanks!",
+        "time": 1771703274,
+        "translated": false
+      }
+    ],
+    "website": "http://www.bamboofootrelaxation.com/",
+    "phone_number": "(408) 898-2345",
+    "opening_hours": [
+      "Monday: 10:00 AM – 10:00 PM",
+      "Tuesday: 10:00 AM – 10:00 PM",
+      "Wednesday: 10:00 AM – 10:00 PM",
+      "Thursday: 10:00 AM – 10:00 PM",
+      "Friday: 10:00 AM – 10:00 PM",
+      "Saturday: 10:00 AM – 10:00 PM",
+      "Sunday: 10:00 AM – 10:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJnVWXHucyjoARckKXn_l-G2c",
+    "name": "O'Paradise Spa",
+    "latitude": 37.3106179,
+    "longitude": -121.8485513,
+    "address": "2268 Senter Rd STE 216, San Jose, CA 95112, USA",
+    "rating": 4.1,
+    "source_grid": "grid_1_3",
+    "total_ratings": 157,
+    "reviews": [
+      {
+        "author_name": "Yatish Koul",
+        "author_url": "https://www.google.com/maps/contrib/102151704475397193035/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjUai-2Qvtt35VEiv8tPJJlrUZDz1DpPp1ZLUonlfLTyUMUqoRjvkA=s128-c0x00000000-cc-rp-mo-ba2",
+        "rating": 1,
+        "relative_time_description": "9 months ago",
+        "text": "I went this place today and they suggested that 1 hour package is for 90$ for which I agreed and when the massage was over, they asked me for 30% tip which was not mentioned anywhere.\nAlso the massage is not given by any professional.\nI really didn’t like the vibe and the people.\nWasted 100$ on this thing, don’t make that mistake.",
+        "time": 1747431177,
+        "translated": false
+      },
+      {
+        "author_name": "Jesus Gonzalez",
+        "author_url": "https://www.google.com/maps/contrib/110920586691597338892/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjV1H0gZ7u4cR0cK1Hbo4S9YFyYRGQN40MMo1vaFpZIHt5lp-HLm=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "9 months ago",
+        "text": "I've been coming to this place at least once a month for two years, and honestly, it's always been a clean, discreet place with relaxing music and atmosphere. The reception is friendly, and at the end, they offer me a free green tea and sometimes a banana. My masseur, Tom, is the best; he always leaves my body relaxed and stress-free! I recommend it 100%.",
+        "time": 1749349011,
+        "translated": false
+      },
+      {
+        "author_name": "Noor",
+        "author_url": "https://www.google.com/maps/contrib/116208082678062029501/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWIN4O1RuiYzzy2s57VKDSYPnwqyHftXP0IIPlCk7LxaB0_hEqGqA=s128-c0x00000000-cc-rp-mo",
+        "rating": 1,
+        "relative_time_description": "8 months ago",
+        "text": "would not recommend!! Definitely the worst massage I ever got. and that’s saying something because I get massages all the time. I paid $180 plus a $15 tip for the worst service. it felt like the massage therapist was trying to pass time by going in boring repeated motions obsessively for straight 10 mins in one spot. or she was obsessively trying to remove knots and even though I was telling her I want her to move on and that hurts she proceeds to do the same on the other side and then some more. there was no variety in movements so the massage is enjoyable. it was either painful or I didn’t feel much and for the FIRST time ever I wanted the massage to just end.",
+        "time": 1750888545,
+        "translated": false
+      }
+    ],
+    "website": "http://www.oparadisebooking.com/",
+    "phone_number": "(408) 288-5175",
+    "opening_hours": [
+      "Monday: 10:00 AM – 10:00 PM",
+      "Tuesday: 10:00 AM – 10:00 PM",
+      "Wednesday: 10:00 AM – 10:00 PM",
+      "Thursday: 10:00 AM – 10:00 PM",
+      "Friday: 10:00 AM – 10:00 PM",
+      "Saturday: 10:00 AM – 10:00 PM",
+      "Sunday: 10:00 AM – 10:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJ_1zwHlg1joARnXxdWTq7kyg",
+    "name": "Rejoice Foot Spa",
+    "latitude": 37.2720633,
+    "longitude": -121.9333014,
+    "address": "2711 Union Ave, San Jose, CA 95124, USA",
+    "rating": 4,
+    "source_grid": "grid_0_0",
+    "total_ratings": 12,
+    "reviews": [
+      {
+        "author_name": "Cooper Wood",
+        "author_url": "https://www.google.com/maps/contrib/106711994282835152587/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIhYFCDYnXwtWf3k3GomB4NxCTCFMbNjaeLpHZtv4lzmIsNXg=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "3 months ago",
+        "text": "The therapist was incredibly skilled and professional. Their technique was perfect, and I felt completely cared for throughout the session. Highly recommend for a top-quality massage!",
+        "time": 1762551167,
+        "translated": false
+      },
+      {
+        "author_name": "JOSE LOPEZ",
+        "author_url": "https://www.google.com/maps/contrib/104599129807593322778/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocIuY1KK_uer-kOCAu0z7pacc7QVw3vo_eu4zDxuGNiamkpFk_Q=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "3 months ago",
+        "text": "From the moment I started, it was clear that the therapist’s technique was highly professional and skillful. She knew exactly how to target the areas that needed relief, making the entire experience incredibly effective. I’ll definitely be coming back for another session.",
+        "time": 1763600146,
+        "translated": false
+      },
+      {
+        "author_name": "Ali H",
+        "author_url": "https://www.google.com/maps/contrib/109497151683594851802/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocJXEcnHy3_VF_0BeTVGGdid91NzE04XGWYOiCKDUofvx3lyFw=s128-c0x00000000-cc-rp-mo",
+        "rating": 5,
+        "relative_time_description": "a year ago",
+        "text": "Rejoice Foot Spa is a hidden gem! From the moment I walked in, I felt welcomed by the friendly staff and the calming atmosphere. The massage was incredibly relaxing and expertly done, leaving me feeling completely refreshed. The space is clean, cozy, and perfect for unwinding after a long day. With such great service and reasonable prices, I’ll definitely be coming back. Highly recommend!",
+        "time": 1741197015,
+        "translated": false
+      }
+    ],
+    "website": "https://carejoicefootspa.wixsite.com/95124",
+    "phone_number": "(408) 369-8688",
+    "opening_hours": [
+      "Monday: 9:00 AM – 10:00 PM",
+      "Tuesday: 9:00 AM – 10:00 PM",
+      "Wednesday: 9:00 AM – 10:00 PM",
+      "Thursday: 9:00 AM – 10:00 PM",
+      "Friday: 9:00 AM – 10:00 PM",
+      "Saturday: 9:00 AM – 10:00 PM",
+      "Sunday: 9:00 AM – 10:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJIYEtYgDNj4ARwNbQQqNBB98",
+    "name": "Asian Massage In San Jose",
+    "latitude": 37.3406673,
+    "longitude": -121.8552449,
+    "address": "683-747 Bonita Ave, San Jose, CA 95116, USA",
+    "rating": 1,
+    "source_grid": "grid_4_3",
+    "total_ratings": 1,
+    "reviews": [
+      {
+        "author_name": "Max EBong",
+        "author_url": "https://www.google.com/maps/contrib/104250445712171902445/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a/ACg8ocLdpcbVPVPhGcSy2mz_Mc0Q0GROZUz2MCeqRtxUkZ2kLaTh8w=s128-c0x00000000-cc-rp-mo",
+        "rating": 1,
+        "relative_time_description": "a year ago",
+        "text": "Very racist and did not accept me because I was black, would never go here",
+        "time": 1727928004,
+        "translated": false
+      }
+    ],
+    "website": null,
+    "phone_number": "(510) 372-9120",
+    "opening_hours": [
+      "Monday: 9:00 AM – 11:00 PM",
+      "Tuesday: 9:00 AM – 11:00 PM",
+      "Wednesday: 9:00 AM – 11:00 PM",
+      "Thursday: 9:00 AM – 11:00 PM",
+      "Friday: 9:00 AM – 11:00 PM",
+      "Saturday: 9:00 AM – 11:00 PM",
+      "Sunday: 9:00 AM – 11:00 PM"
+    ]
+  },
+  {
+    "place_id": "ChIJDdDLpSIzjoAR0sYh8OwgE4o",
+    "name": "Lisa Silvers",
+    "latitude": 37.3080594,
+    "longitude": -121.8667767,
+    "address": "1893 Monterey Rd, San Jose, CA 95112, USA",
+    "rating": 2,
+    "source_grid": "grid_1_4",
+    "total_ratings": 1,
+    "reviews": [
+      {
+        "author_name": "luis pena",
+        "author_url": "https://www.google.com/maps/contrib/104457361980761771222/reviews",
+        "language": "en",
+        "original_language": "en",
+        "profile_photo_url": "https://lh3.googleusercontent.com/a-/ALV-UjWKWbTqTQ-4z2rKlTGxtRWbd_BGtzZK0-4qVJi3RpE_cQF74ro=s128-c0x00000000-cc-rp-mo-ba5",
+        "rating": 2,
+        "relative_time_description": "a year ago",
+        "text": "The SA we",
+        "time": 1713132229,
+        "translated": false
+      }
+    ],
+    "website": null,
+    "phone_number": "(408) 656-9200",
+    "opening_hours": []
+  }
+]
