@@ -27,8 +27,9 @@ def _make_empty_result() -> dict:
 
 def _extract_json(text: str) -> dict:
     """Parse JSON from LLM output, stripping markdown fences if present."""
-    # Strip ```json ... ``` or ``` ... ``` wrappers
-    stripped = re.sub(r"```(?:json)?\s*([\s\S]*?)\s*```", r"\1", text).strip()
+    # Extract content from ```json ... ``` fences, ignoring surrounding text
+    match = re.search(r"```(?:json)?\s*([\s\S]*?)\s*```", text)
+    stripped = match.group(1).strip() if match else text.strip()
     try:
         parsed = json.loads(stripped)
     except (json.JSONDecodeError, ValueError):

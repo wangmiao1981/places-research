@@ -155,6 +155,33 @@ class TestErrorHandling(unittest.TestCase):
 
         self.assertEqual(report["overall_sentiment"], "positive")
 
+    def test_llm_returns_fence_with_surrounding_text(self):
+        """LLM puts text before/after the code fence."""
+        wrapped = (
+            "Here is the analysis result:\n"
+            "```json\n" + VALID_LLM_RESPONSE + "\n```\n"
+            "Let me know if you need anything else!"
+        )
+        analyzer, llm, prompt = make_analyzer(llm_response=wrapped)
+        businesses = [make_business("Place", ["Nice"])]
+        report = analyzer.analyze(businesses, "cafe", "Boston")
+
+        self.assertEqual(report["overall_sentiment"], "positive")
+        self.assertEqual(len(report["positive_themes"]), 1)
+
+    def test_extract_json_surrounding_text_directly(self):
+        """_extract_json must extract from fences even with surrounding prose."""
+        from sentiment_analyzer import _extract_json
+        text = 'Sure! Here you go:\n```json\n{"key": "value"}\n```\nHope this helps!'
+        result = _extract_json(text)
+        self.assertEqual(result, {"key": "value"})
+
+    def test_extract_json_no_fence(self):
+        """_extract_json works with plain JSON (no fences)."""
+        from sentiment_analyzer import _extract_json
+        result = _extract_json('{"key": "value"}')
+        self.assertEqual(result, {"key": "value"})
+
 
 # ---------------------------------------------------------------------------
 # save_report
