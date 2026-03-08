@@ -407,19 +407,26 @@ def main() -> None:
         print(f"Token budget: {args.max_tokens} tokens")
     print()
 
-    from llm_client import LLMClient
-    from prompt_engine import PromptEngine
-    from web_searcher import WebSearcher
-
-    llm_client = LLMClient()
-    prompt_engine = PromptEngine()
-
-    # WebSearcher may fail if TAVILY_API_KEY is missing — this is non-fatal
-    # since the pipeline treats web stage failures gracefully.
-    try:
-        web_searcher = WebSearcher()
-    except EnvironmentError:
+    # Dry-run doesn't need API clients — skip creation to avoid crashes
+    # when API keys are not configured.
+    if args.dry_run:
+        llm_client = None
+        prompt_engine = None
         web_searcher = None
+    else:
+        from llm_client import LLMClient
+        from prompt_engine import PromptEngine
+        from web_searcher import WebSearcher
+
+        llm_client = LLMClient()
+        prompt_engine = PromptEngine()
+
+        # WebSearcher may fail if TAVILY_API_KEY is missing — this is non-fatal
+        # since the pipeline treats web stage failures gracefully.
+        try:
+            web_searcher = WebSearcher()
+        except EnvironmentError:
+            web_searcher = None
 
     result = run_pipeline(
         businesses=businesses,

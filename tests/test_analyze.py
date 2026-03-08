@@ -606,15 +606,6 @@ class TestStageUsageTracking(unittest.TestCase):
             "web_searcher": MagicMock(),
         }
 
-        def make_side_effect(di, do, dc):
-            """Return a side_effect that bumps token counts and returns a value."""
-            def _effect(*args, **kwargs):
-                token_state["input"] += di
-                token_state["output"] += do
-                token_state["calls"] += dc
-                token_state["cost"] += (di * 3.0 + do * 15.0) / 1_000_000
-            return _effect
-
         with patch("analyze.UserInterviewer") as mock_interview, \
              patch("analyze.StatsAnalyzer") as mock_stats, \
              patch("analyze.SentimentAnalyzer") as mock_sentiment, \
