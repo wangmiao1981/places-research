@@ -1,3 +1,17 @@
+# Copyright 2025 Miao Wang
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Proactive tests for Issues #6-10 modules.
 
 These tests probe edge cases and potential bugs that could surface when the
@@ -26,9 +40,9 @@ class TestSentimentAnalyzerProactive(unittest.TestCase):
     def _import_module(self):
         from sentiment_analyzer import (
             SentimentAnalyzer, _extract_json, _merge_results,
-            REVIEWS_PER_BATCH, _EMPTY_RESULT,
+            REVIEWS_PER_BATCH, _make_empty_result,
         )
-        return SentimentAnalyzer, _extract_json, _merge_results, REVIEWS_PER_BATCH, _EMPTY_RESULT
+        return SentimentAnalyzer, _extract_json, _merge_results, REVIEWS_PER_BATCH, _make_empty_result
 
     def test_extract_json_nested_fences(self):
         """BUG: LLM sometimes returns nested fences like ```json\\n```json ..."""
@@ -529,9 +543,9 @@ class TestCrossModuleEdgeCases(unittest.TestCase):
 
     def test_sentiment_output_is_valid_strategy_input(self):
         """The sentiment analyzer's output format must be consumable by strategy analyzer."""
-        from sentiment_analyzer import _EMPTY_RESULT
-        # _EMPTY_RESULT must be JSON-serializable for strategy's json.dumps()
-        serialized = json.dumps(_EMPTY_RESULT)
+        from sentiment_analyzer import _make_empty_result
+        # _make_empty_result() must return JSON-serializable data for strategy's json.dumps()
+        serialized = json.dumps(_make_empty_result())
         self.assertIsInstance(json.loads(serialized), dict)
 
     def test_all_artifact_keys_consistent(self):
