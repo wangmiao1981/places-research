@@ -136,7 +136,7 @@ class _BedrockBearerClient:
 # ---------------------------------------------------------------------------
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
-BEDROCK_DEFAULT_MODEL = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+BEDROCK_DEFAULT_MODEL = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 DEFAULT_MAX_TOKENS = 1024
 MAX_RETRIES = 3
 BASE_BACKOFF_SECONDS = 1.0
