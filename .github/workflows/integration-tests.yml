@@ -75,10 +75,32 @@ jobs:
           const branch = context.eventName === 'workflow_dispatch'
             ? (context.payload.inputs && context.payload.inputs.branch) || 'main'
             : 'main (scheduled)';
+          const title = `Integration tests failed on ${branch}`;
+
+          // Check for an existing open issue with the same title to avoid duplicates
+          const { data: existing } = await github.rest.issues.listForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            labels: 'bug',
+            per_page: 100,
+          });
+          const duplicate = existing.find(issue => issue.title === title);
+          if (duplicate) {
+            // Add a comment to the existing issue instead of creating a new one
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: duplicate.number,
+              body: `Integration tests failed again.\n\n**Workflow run:** ${runUrl}\n**Triggered by:** ${context.eventName}`,
+            });
+            return;
+          }
+
           await github.rest.issues.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            title: `Integration tests failed on ${branch}`,
+            title,
             body: [
               '## Integration Test Failure',
               '',
