@@ -46,6 +46,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
+        pip install -r requirements-dev.txt
 
     - name: Run integration tests
       env:
@@ -90,5 +91,5 @@ jobs:
               '',
               '> This issue was created automatically by the Integration Tests workflow.',
             ].join('\n'),
-            labels: ['bug', 'integration-tests'],
+            labels: ['bug'],
           });
