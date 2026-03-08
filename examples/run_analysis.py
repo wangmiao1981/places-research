@@ -202,24 +202,40 @@ def main():
     print(f"  Output:     {output_dir}")
     print()
 
-    # Check API key availability
-    has_llm = bool(
-        os.environ.get("ANTHROPIC_API_KEY")
-        or os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
-    )
+    # Check API key availability (best-effort: IAM credentials can't be
+    # easily detected here, so we only warn — LLMClient handles the real check)
+    has_api_key = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    has_bearer = bool(os.environ.get("AWS_BEARER_TOKEN_BEDROCK"))
     has_web = bool(os.environ.get("TAVILY_API_KEY"))
 
+    # Try to detect if anthropic[bedrock] is installed (IAM auth)
+    try:
+        from anthropic import AnthropicBedrock  # noqa: F401
+        has_bedrock_sdk = True
+    except ImportError:
+        has_bedrock_sdk = False
+
+    has_llm = has_api_key or has_bearer or has_bedrock_sdk
+
     print("  API Keys:")
-    print(f"    LLM (Anthropic/Bedrock):  {'configured' if has_llm else 'MISSING — required'}")
+    if has_api_key:
+        print("    LLM auth: Anthropic API key")
+    elif has_bearer:
+        print("    LLM auth: AWS Bedrock (bearer token)")
+    elif has_bedrock_sdk:
+        print("    LLM auth: AWS Bedrock (IAM credentials)")
+    else:
+        print("    LLM auth: MISSING — required")
     print(f"    Web search (Tavily):      {'configured' if has_web else 'not set (web stage will be skipped)'}")
     print()
 
     if not has_llm and not args.dry_run:
-        print("ERROR: No LLM API key found.")
+        print("ERROR: No LLM authentication method found.")
         print()
-        print("Set one of the following environment variables:")
-        print("  export ANTHROPIC_API_KEY='sk-ant-...'")
-        print("  export AWS_BEARER_TOKEN_BEDROCK='your-token'")
+        print("Configure one of the following:")
+        print("  Option A: export ANTHROPIC_API_KEY='sk-ant-...'")
+        print("  Option B: export AWS_BEARER_TOKEN_BEDROCK='your-token'")
+        print("  Option C: pip install anthropic[bedrock]  (+ AWS IAM credentials)")
         print()
         print("Or run with --dry-run to preview without API calls:")
         print(f"  PYTHONPATH=src python3 {__file__} --dry-run")
