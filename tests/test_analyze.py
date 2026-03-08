@@ -312,5 +312,432 @@ class TestRunPipeline(unittest.TestCase):
             mocks["report"].return_value.generate.assert_called_once()
 
 
+class TestParseArgsNewFlags(unittest.TestCase):
+    """Tests for the new --dry-run and --max-tokens flags."""
+
+    def test_dry_run_flag_default_false(self):
+        args = parse_args(["--input", "data.json"])
+        self.assertFalse(args.dry_run)
+
+    def test_dry_run_flag_set(self):
+        args = parse_args(["--input", "data.json", "--dry-run"])
+        self.assertTrue(args.dry_run)
+
+    def test_max_tokens_default_none(self):
+        args = parse_args(["--input", "data.json"])
+        self.assertIsNone(args.max_tokens)
+
+    def test_max_tokens_set(self):
+        args = parse_args(["--input", "data.json", "--max-tokens", "50000"])
+        self.assertEqual(args.max_tokens, 50000)
+
+    def test_max_tokens_must_be_integer(self):
+        with self.assertRaises(SystemExit):
+            parse_args(["--input", "data.json", "--max-tokens", "not_an_int"])
+
+
+class TestDryRun(unittest.TestCase):
+    """Tests for --dry-run mode."""
+
+    def _make_llm_client(self):
+        mock = MagicMock()
+        mock.get_usage_summary.return_value = {
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "total_calls": 0,
+            "estimated_cost_usd": 0.0,
+        }
+        return mock
+
+    def test_dry_run_returns_success(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.SentimentAnalyzer") as mock_sa:
+                # REVIEWS_PER_BATCH must be importable from sentiment_analyzer
+                mock_sa  # not needed but kept for clarity
+                result = run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    dry_run=True,
+                    llm_client=self._make_llm_client(),
+                )
+        self.assertTrue(result["success"])
+        self.assertTrue(result.get("dry_run"))
+
+    def test_dry_run_does_not_call_llm(self):
+        llm_client = self._make_llm_client()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_pipeline(
+                businesses=list(SAMPLE_BUSINESSES),
+                output_dir=tmpdir,
+                dry_run=True,
+                llm_client=llm_client,
+            )
+        # The LLM client's call/stream methods must not have been invoked
+        llm_client.call.assert_not_called()
+        llm_client.stream.assert_not_called()
+
+    def test_dry_run_does_not_invoke_stage_constructors(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.UserInterviewer") as mock_interview, \
+                 patch("analyze.StatsAnalyzer") as mock_stats, \
+                 patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+                 patch("analyze.WebResearcher") as mock_web, \
+                 patch("analyze.StrategyAnalyzer") as mock_strategy, \
+                 patch("analyze.ReportGenerator") as mock_report:
+
+                run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    dry_run=True,
+                    llm_client=self._make_llm_client(),
+                )
+
+                mock_interview.assert_not_called()
+                mock_stats.assert_not_called()
+                mock_sentiment.assert_not_called()
+                mock_web.assert_not_called()
+                mock_strategy.assert_not_called()
+                mock_report.assert_not_called()
+
+    def test_dry_run_no_artifacts_written(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            run_pipeline(
+                businesses=list(SAMPLE_BUSINESSES),
+                output_dir=tmpdir,
+                dry_run=True,
+                llm_client=self._make_llm_client(),
+            )
+            for s in STAGES:
+                path = stage_artifact_path(tmpdir, s)
+                self.assertFalse(
+                    os.path.exists(path),
+                    f"Dry-run should not create artifact: {path}",
+                )
+
+    def test_dry_run_completed_stages_empty(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = run_pipeline(
+                businesses=list(SAMPLE_BUSINESSES),
+                output_dir=tmpdir,
+                dry_run=True,
+                llm_client=self._make_llm_client(),
+            )
+        self.assertEqual(result["completed_stages"], [])
+
+    def test_dry_run_single_stage(self):
+        """dry_run with stage= only shows plan for that stage."""
+        llm_client = self._make_llm_client()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = run_pipeline(
+                businesses=list(SAMPLE_BUSINESSES),
+                output_dir=tmpdir,
+                dry_run=True,
+                stage="sentiment",
+                llm_client=llm_client,
+            )
+        self.assertTrue(result["success"])
+        llm_client.call.assert_not_called()
+
+
+class TestMaxTokensBudget(unittest.TestCase):
+    """Tests for --max-tokens budget enforcement."""
+
+    def _make_deps_with_usage(self, total_tokens: int):
+        """Return deps where llm_client reports total_tokens used."""
+        mock = MagicMock()
+        mock.get_usage_summary.return_value = {
+            "total_input_tokens": total_tokens,
+            "total_output_tokens": 0,
+            "total_calls": 1,
+            "estimated_cost_usd": 0.001,
+        }
+        return {
+            "llm_client": mock,
+            "prompt_engine": MagicMock(),
+            "web_searcher": MagicMock(),
+        }
+
+    def test_pipeline_stops_when_budget_exceeded_before_sentiment(self):
+        """If token usage already exceeds budget before sentiment, stop."""
+        deps = self._make_deps_with_usage(total_tokens=10_000)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.UserInterviewer") as mock_interview, \
+                 patch("analyze.StatsAnalyzer") as mock_stats, \
+                 patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+                 patch("analyze.WebResearcher"), \
+                 patch("analyze.StrategyAnalyzer"), \
+                 patch("analyze.ReportGenerator"):
+
+                mock_interview.return_value.run.return_value = {"business_type": "spa"}
+                mock_stats.return_value.analyze.return_value = {"total_businesses": 2}
+
+                result = run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    max_tokens=5_000,  # budget already exceeded
+                    **deps,
+                )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failed_stage"], "sentiment")
+        self.assertIn("Token budget exceeded", result["error"])
+        self.assertIn("5000", result["error"])
+        # Non-LLM stages (interview, stats) should have completed
+        self.assertIn("interview", result["completed_stages"])
+        self.assertIn("stats", result["completed_stages"])
+        # Sentiment should not have been called
+        mock_sentiment.return_value.analyze.assert_not_called()
+
+    def test_pipeline_stops_when_budget_exceeded_before_strategy(self):
+        """Budget exceeded after sentiment/web but before strategy."""
+        call_count = [0]
+
+        def usage_side_effect():
+            # Returns increasing token counts to simulate accumulation.
+            # Call order: interview(before,after)=2, stats(before,after)=2,
+            # sentiment(budget,before,after)=3, web(budget,before,after)=3,
+            # strategy(budget)=1.  Total through web = 10 calls.
+            # We want strategy budget check (call 11) to exceed the limit.
+            call_count[0] += 1
+            tokens = 0 if call_count[0] <= 10 else 20_000
+            return {
+                "total_input_tokens": tokens,
+                "total_output_tokens": 0,
+                "total_calls": call_count[0],
+                "estimated_cost_usd": 0.0,
+            }
+
+        mock_llm = MagicMock()
+        mock_llm.get_usage_summary.side_effect = usage_side_effect
+        deps = {
+            "llm_client": mock_llm,
+            "prompt_engine": MagicMock(),
+            "web_searcher": MagicMock(),
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.UserInterviewer") as mock_interview, \
+                 patch("analyze.StatsAnalyzer") as mock_stats, \
+                 patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+                 patch("analyze.WebResearcher") as mock_web, \
+                 patch("analyze.StrategyAnalyzer") as mock_strategy, \
+                 patch("analyze.ReportGenerator"):
+
+                mock_interview.return_value.run.return_value = {"business_type": "spa"}
+                mock_stats.return_value.analyze.return_value = {"total_businesses": 2}
+                mock_sentiment.return_value.analyze.return_value = {"overall_sentiment": "positive"}
+                mock_web.return_value.research.return_value = {"rent_ranges": {}}
+
+                result = run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    max_tokens=15_000,
+                    **deps,
+                )
+
+        self.assertFalse(result["success"])
+        self.assertEqual(result["failed_stage"], "strategy")
+        self.assertIn("Token budget exceeded", result["error"])
+        mock_strategy.return_value.analyze.assert_not_called()
+
+    def test_no_max_tokens_runs_full_pipeline(self):
+        """When max_tokens is None, pipeline runs to completion."""
+        mock_llm = MagicMock()
+        mock_llm.get_usage_summary.return_value = {
+            "total_input_tokens": 999_999,
+            "total_output_tokens": 999_999,
+            "total_calls": 100,
+            "estimated_cost_usd": 99.99,
+        }
+        deps = {
+            "llm_client": mock_llm,
+            "prompt_engine": MagicMock(),
+            "web_searcher": MagicMock(),
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.UserInterviewer") as mock_interview, \
+                 patch("analyze.StatsAnalyzer") as mock_stats, \
+                 patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+                 patch("analyze.WebResearcher") as mock_web, \
+                 patch("analyze.StrategyAnalyzer") as mock_strategy, \
+                 patch("analyze.ReportGenerator") as mock_report:
+
+                mock_interview.return_value.run.return_value = {"business_type": "spa"}
+                mock_stats.return_value.analyze.return_value = {"total_businesses": 2}
+                mock_sentiment.return_value.analyze.return_value = {"overall_sentiment": "positive"}
+                mock_web.return_value.research.return_value = {"rent_ranges": {}}
+                mock_strategy.return_value.analyze.return_value = {"market_saturation": {}}
+                mock_report.return_value.generate.return_value = "# Report"
+
+                result = run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    max_tokens=None,
+                    **deps,
+                )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(set(result["completed_stages"]), set(STAGES))
+
+
+class TestStageUsageTracking(unittest.TestCase):
+    """Tests for per-stage token usage tracking."""
+
+    def _run_with_incrementing_usage(self, output_dir):
+        """Run the full pipeline with a mock that increments token counts per stage."""
+        token_state = {"input": 0, "output": 0, "calls": 0, "cost": 0.0}
+
+        def usage_side_effect():
+            return {
+                "total_input_tokens": token_state["input"],
+                "total_output_tokens": token_state["output"],
+                "total_calls": token_state["calls"],
+                "estimated_cost_usd": token_state["cost"],
+            }
+
+        mock_llm = MagicMock()
+        mock_llm.get_usage_summary.side_effect = usage_side_effect
+
+        deps = {
+            "llm_client": mock_llm,
+            "prompt_engine": MagicMock(),
+            "web_searcher": MagicMock(),
+        }
+
+        with patch("analyze.UserInterviewer") as mock_interview, \
+             patch("analyze.StatsAnalyzer") as mock_stats, \
+             patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+             patch("analyze.WebResearcher") as mock_web, \
+             patch("analyze.StrategyAnalyzer") as mock_strategy, \
+             patch("analyze.ReportGenerator") as mock_report:
+
+            mock_interview.return_value.run.return_value = {"business_type": "spa"}
+            mock_stats.return_value.analyze.return_value = {"total_businesses": 2}
+
+            # LLM stages bump the counters
+            def sentiment_effect(*args, **kwargs):
+                token_state["input"] += 100
+                token_state["output"] += 50
+                token_state["calls"] += 1
+                return {"overall_sentiment": "positive"}
+            mock_sentiment.return_value.analyze.side_effect = sentiment_effect
+
+            def web_effect(*args, **kwargs):
+                token_state["input"] += 200
+                token_state["output"] += 80
+                token_state["calls"] += 2
+                return {"rent_ranges": {}}
+            mock_web.return_value.research.side_effect = web_effect
+
+            def strategy_effect(*args, **kwargs):
+                token_state["input"] += 300
+                token_state["output"] += 120
+                token_state["calls"] += 3
+                return {"market_saturation": {}}
+            mock_strategy.return_value.analyze.side_effect = strategy_effect
+
+            def report_effect(*args, **kwargs):
+                token_state["input"] += 400
+                token_state["output"] += 160
+                token_state["calls"] += 4
+                return "# Report"
+            mock_report.return_value.generate.side_effect = report_effect
+
+            result = run_pipeline(
+                businesses=[
+                    {"place_id": "p1", "name": "Spa", "rating": 4.5, "reviews": []},
+                ],
+                output_dir=output_dir,
+                **deps,
+            )
+
+        return result
+
+    def test_stage_usage_key_present(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run_with_incrementing_usage(tmpdir)
+        self.assertIn("stage_usage", result)
+
+    def test_stage_usage_has_all_stages(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run_with_incrementing_usage(tmpdir)
+        stage_usage = result["stage_usage"]
+        for s in STAGES:
+            self.assertIn(s, stage_usage, f"Missing stage_usage for: {s}")
+
+    def test_stage_usage_has_required_keys(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run_with_incrementing_usage(tmpdir)
+        for s, su in result["stage_usage"].items():
+            self.assertIn("input_tokens", su, f"Missing input_tokens for stage: {s}")
+            self.assertIn("output_tokens", su, f"Missing output_tokens for stage: {s}")
+            self.assertIn("cost_usd", su, f"Missing cost_usd for stage: {s}")
+
+    def test_non_llm_stages_have_zero_tokens(self):
+        """interview and stats don't use LLM, so their delta should be 0."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run_with_incrementing_usage(tmpdir)
+        su = result["stage_usage"]
+        self.assertEqual(su["interview"]["input_tokens"], 0)
+        self.assertEqual(su["interview"]["output_tokens"], 0)
+        self.assertEqual(su["stats"]["input_tokens"], 0)
+        self.assertEqual(su["stats"]["output_tokens"], 0)
+
+    def test_llm_stages_have_nonzero_tokens(self):
+        """sentiment, web, strategy, report each consume tokens."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            result = self._run_with_incrementing_usage(tmpdir)
+        su = result["stage_usage"]
+        self.assertEqual(su["sentiment"]["input_tokens"], 100)
+        self.assertEqual(su["sentiment"]["output_tokens"], 50)
+        self.assertEqual(su["web"]["input_tokens"], 200)
+        self.assertEqual(su["web"]["output_tokens"], 80)
+        self.assertEqual(su["strategy"]["input_tokens"], 300)
+        self.assertEqual(su["strategy"]["output_tokens"], 120)
+        self.assertEqual(su["report"]["input_tokens"], 400)
+        self.assertEqual(su["report"]["output_tokens"], 160)
+
+    def test_stage_usage_preserved_on_failure(self):
+        """stage_usage is included in the result even when pipeline fails."""
+        mock_llm = MagicMock()
+        mock_llm.get_usage_summary.return_value = {
+            "total_input_tokens": 0,
+            "total_output_tokens": 0,
+            "total_calls": 0,
+            "estimated_cost_usd": 0.0,
+        }
+        deps = {
+            "llm_client": mock_llm,
+            "prompt_engine": MagicMock(),
+            "web_searcher": MagicMock(),
+        }
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("analyze.UserInterviewer") as mock_interview, \
+                 patch("analyze.StatsAnalyzer") as mock_stats, \
+                 patch("analyze.SentimentAnalyzer") as mock_sentiment, \
+                 patch("analyze.WebResearcher"), \
+                 patch("analyze.StrategyAnalyzer"), \
+                 patch("analyze.ReportGenerator"):
+
+                mock_interview.return_value.run.return_value = {"business_type": "spa"}
+                mock_stats.return_value.analyze.return_value = {"total_businesses": 2}
+                mock_sentiment.return_value.analyze.side_effect = RuntimeError("API error")
+
+                result = run_pipeline(
+                    businesses=list(SAMPLE_BUSINESSES),
+                    output_dir=tmpdir,
+                    **deps,
+                )
+
+        self.assertFalse(result["success"])
+        self.assertIn("stage_usage", result)
+        # interview and stats completed before failure
+        self.assertIn("interview", result["stage_usage"])
+        self.assertIn("stats", result["stage_usage"])
+
+
 if __name__ == "__main__":
     unittest.main()

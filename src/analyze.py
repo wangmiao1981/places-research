@@ -20,13 +20,18 @@ Usage::
     python src/analyze.py --input grid_search_results.json
     python src/analyze.py --input data.json --output-dir ./output --resume
     python src/analyze.py --input data.json --stage sentiment
+    python src/analyze.py --input data.json --dry-run
+    python src/analyze.py --input data.json --max-tokens 50000
 """
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from user_interview import UserInterviewer
 from stats_analyzer import StatsAnalyzer
@@ -67,6 +72,9 @@ _ARTIFACT_FILENAMES = {
     "report": "final_report.md",
 }
 
+# Stages that make LLM API calls and are subject to the token budget check.
+_LLM_STAGES = {"sentiment", "web", "strategy", "report"}
+
 
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -87,6 +95,14 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     parser.add_argument(
         "--stage", choices=STAGES, default=None,
         help="Run a single stage instead of the full pipeline.",
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Print what each stage would do without making API calls, then exit.",
+    )
+    parser.add_argument(
+        "--max-tokens", type=int, default=None,
+        help="Stop the pipeline if cumulative token usage exceeds this budget.",
     )
     return parser.parse_args(argv)
 
@@ -116,6 +132,14 @@ def _save_artifact(data: Any, path: str) -> None:
         p.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+def _get_token_total(usage_summary: Dict[str, Any]) -> int:
+    """Return total tokens (input + output) from a usage summary dict."""
+    return (
+        usage_summary.get("total_input_tokens", 0)
+        + usage_summary.get("total_output_tokens", 0)
+    )
+
+
 def run_pipeline(
     businesses: List[dict],
     output_dir: str,
@@ -124,18 +148,79 @@ def run_pipeline(
     llm_client=None,
     prompt_engine=None,
     web_searcher=None,
+    dry_run: bool = False,
+    max_tokens: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Run the analysis pipeline and return a result dict.
 
+    The ``web`` stage is treated as non-fatal: if it fails (e.g. because
+    ``TAVILY_API_KEY`` is not configured), the error is recorded in
+    ``warnings`` and the pipeline continues with an empty ``web_research``
+    artifact so that the strategy and report stages can still produce output.
+
     Returns:
         Dict with keys: success (bool), completed_stages (list),
-        failed_stage (str or None), error (str or None), usage (dict).
+        failed_stage (str or None), error (str or None), warnings (list),
+        usage (dict), stage_usage (dict mapping stage name to
+        {input_tokens, output_tokens, cost_usd}).
     """
+    # Dry-run: print plan and return without making any API calls
+    if dry_run:
+        from sentiment_analyzer import REVIEWS_PER_BATCH
+        stages_to_show = [stage] if stage else list(STAGES)
+        total_reviews = sum(
+            len(b.get("reviews") or []) for b in businesses
+        )
+        batch_count = (
+            (total_reviews + REVIEWS_PER_BATCH - 1) // REVIEWS_PER_BATCH
+            if total_reviews else 0
+        )
+        # Best-effort business type / location from existing interview artifact
+        _profile = {}
+        if resume or stage:
+            _ipath = stage_artifact_path(output_dir, "interview")
+            if Path(_ipath).exists():
+                try:
+                    _profile = _load_artifact(_ipath)
+                except (json.JSONDecodeError, OSError):
+                    pass
+        _btype = _profile.get("business_type", "unknown")
+        _loc = _profile.get("data_source") or "unknown location"
+
+        for s in stages_to_show:
+            if s == "interview":
+                print(f"  [dry-run] interview: would interview with {len(businesses)} businesses")
+            elif s == "stats":
+                print(f"  [dry-run] stats: would analyze {len(businesses)} businesses")
+            elif s == "sentiment":
+                print(
+                    f"  [dry-run] sentiment: would analyze {total_reviews} reviews "
+                    f"in {batch_count} batch(es)"
+                )
+            elif s == "web":
+                print(f"  [dry-run] web: would search for {_btype} in {_loc}")
+            elif s == "strategy":
+                print("  [dry-run] strategy: would analyze with all prior stage data")
+            elif s == "report":
+                print("  [dry-run] report: would generate final report")
+        return {
+            "success": True,
+            "completed_stages": [],
+            "failed_stage": None,
+            "error": None,
+            "warnings": [],
+            "usage": {},
+            "stage_usage": {},
+            "dry_run": True,
+        }
+
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
     stages_to_run = [stage] if stage else list(STAGES)
     completed_stages: List[str] = []
+    warnings: List[str] = []
     artifacts: Dict[str, Any] = {}
+    stage_usage: Dict[str, Dict[str, Any]] = {}
 
     # Pre-load existing artifacts when resuming or running a single late stage
     if resume or stage:
@@ -158,6 +243,27 @@ def run_pipeline(
             completed_stages.append(current_stage)
             continue
 
+        # Token budget check before LLM stages
+        if current_stage in _LLM_STAGES and max_tokens is not None and llm_client is not None:
+            current_usage = llm_client.get_usage_summary()
+            if _get_token_total(current_usage) >= max_tokens:
+                return {
+                    "success": False,
+                    "completed_stages": completed_stages,
+                    "failed_stage": current_stage,
+                    "error": (
+                        f"Token budget exceeded before stage '{current_stage}': "
+                        f"used {_get_token_total(current_usage)} tokens, "
+                        f"budget is {max_tokens} tokens."
+                    ),
+                    "warnings": warnings,
+                    "usage": current_usage,
+                    "stage_usage": stage_usage,
+                }
+
+        # Snapshot token usage before this stage
+        before = llm_client.get_usage_summary() if llm_client else {}
+
         try:
             result = _run_stage(
                 current_stage, businesses, artifacts,
@@ -167,20 +273,50 @@ def run_pipeline(
             _save_artifact(result, stage_artifact_path(output_dir, current_stage))
             completed_stages.append(current_stage)
         except Exception as exc:
-            return {
-                "success": False,
-                "completed_stages": completed_stages,
-                "failed_stage": current_stage,
-                "error": str(exc),
-                "usage": llm_client.get_usage_summary() if llm_client else {},
-            }
+            if current_stage == "web":
+                # Web stage failure is non-fatal: downstream stages can work
+                # with empty web_research (e.g. when TAVILY_API_KEY is absent).
+                warning_msg = f"web stage skipped: {exc}"
+                logger.warning(warning_msg)
+                warnings.append(warning_msg)
+                artifacts["web"] = {}
+                completed_stages.append(current_stage)
+            else:
+                return {
+                    "success": False,
+                    "completed_stages": completed_stages,
+                    "failed_stage": current_stage,
+                    "error": str(exc),
+                    "warnings": warnings,
+                    "usage": llm_client.get_usage_summary() if llm_client else {},
+                    "stage_usage": stage_usage,
+                }
+
+        # Record per-stage delta
+        after = llm_client.get_usage_summary() if llm_client else {}
+        stage_usage[current_stage] = {
+            "input_tokens": (
+                after.get("total_input_tokens", 0)
+                - before.get("total_input_tokens", 0)
+            ),
+            "output_tokens": (
+                after.get("total_output_tokens", 0)
+                - before.get("total_output_tokens", 0)
+            ),
+            "cost_usd": (
+                after.get("estimated_cost_usd", 0.0)
+                - before.get("estimated_cost_usd", 0.0)
+            ),
+        }
 
     return {
         "success": True,
         "completed_stages": completed_stages,
         "failed_stage": None,
         "error": None,
+        "warnings": warnings,
         "usage": llm_client.get_usage_summary() if llm_client else {},
+        "stage_usage": stage_usage,
     }
 
 
@@ -213,6 +349,10 @@ def _run_stage(
         return analyzer.analyze(businesses, business_type, location)
 
     elif stage == "web":
+        if web_searcher is None:
+            raise EnvironmentError(
+                "Web research unavailable: TAVILY_API_KEY is not configured."
+            )
         _ensure_imports()
         researcher = WebResearcher(llm_client, web_searcher, prompt_engine)
         return researcher.research(business_type, location, user_profile)
@@ -261,15 +401,32 @@ def main() -> None:
         print("Resume mode: skipping completed stages")
     if args.stage:
         print(f"Single stage mode: {args.stage}")
+    if args.dry_run:
+        print("Dry-run mode: no API calls will be made")
+    if args.max_tokens is not None:
+        print(f"Token budget: {args.max_tokens} tokens")
     print()
 
-    from llm_client import LLMClient
-    from prompt_engine import PromptEngine
-    from web_searcher import WebSearcher
+    # Dry-run doesn't need API clients — skip creation to avoid crashes
+    # when API keys are not configured.
+    if args.dry_run:
+        llm_client = None
+        prompt_engine = None
+        web_searcher = None
+    else:
+        from llm_client import LLMClient
+        from prompt_engine import PromptEngine
+        from web_searcher import WebSearcher
 
-    llm_client = LLMClient()
-    prompt_engine = PromptEngine()
-    web_searcher = WebSearcher()
+        llm_client = LLMClient()
+        prompt_engine = PromptEngine()
+
+        # WebSearcher may fail if TAVILY_API_KEY is missing — this is non-fatal
+        # since the pipeline treats web stage failures gracefully.
+        try:
+            web_searcher = WebSearcher()
+        except EnvironmentError:
+            web_searcher = None
 
     result = run_pipeline(
         businesses=businesses,
@@ -279,7 +436,12 @@ def main() -> None:
         llm_client=llm_client,
         prompt_engine=prompt_engine,
         web_searcher=web_searcher,
+        dry_run=args.dry_run,
+        max_tokens=args.max_tokens,
     )
+
+    if result.get("dry_run"):
+        sys.exit(0)
 
     # Print results
     print()
@@ -290,6 +452,19 @@ def main() -> None:
         print(f"Pipeline failed at stage: {result['failed_stage']}")
         print(f"Error: {result['error']}")
         print(f"Stages completed before failure: {', '.join(result['completed_stages'])}")
+
+    # Per-stage usage breakdown
+    stage_usage = result.get("stage_usage", {})
+    if stage_usage:
+        print()
+        print("Per-Stage Token Usage:")
+        print(f"  {'Stage':<12} {'Input':>10} {'Output':>10} {'Cost (USD)':>12}")
+        print(f"  {'-'*12} {'-'*10} {'-'*10} {'-'*12}")
+        for s, su in stage_usage.items():
+            print(
+                f"  {s:<12} {su['input_tokens']:>10} {su['output_tokens']:>10} "
+                f"${su['cost_usd']:>11.4f}"
+            )
 
     # Token usage summary
     usage = result.get("usage", {})
