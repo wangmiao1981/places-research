@@ -72,6 +72,107 @@ jobs:
         fi
       continue-on-error: true
 
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install detect-secrets
+      run: pip install detect-secrets
+
+    - name: Scan for secrets in current tree
+      run: |
+        # Audit against baseline — only NEW secrets trigger failure
+        detect-secrets scan --all-files \
+          --exclude-files '\.env$' \
+          --exclude-files '\.git/' \
+          > secrets-report.json
+        detect-secrets audit --report --baseline .secrets.baseline \
+          || true
+        # Compare scan vs baseline to find NEW secrets
+        python3 << 'PYEOF'
+        import json, sys
+
+        with open('secrets-report.json') as f:
+            scan = json.load(f)
+        with open('.secrets.baseline') as f:
+            baseline = json.load(f)
+
+        # Collect baseline hashes that are marked as false positives
+        known = set()
+        for path, findings in baseline.get('results', {}).items():
+            for f in findings:
+                if not f.get('is_secret', True):
+                    known.add((path, f['hashed_secret'], f['line_number']))
+
+        new_secrets = []
+        for path, findings in scan.get('results', {}).items():
+            for f in findings:
+                key = (path, f['hashed_secret'], f['line_number'])
+                if key not in known:
+                    new_secrets.append(f"  {path}:{f['line_number']} - {f['type']}")
+
+        if new_secrets:
+            print(f"FAILED: {len(new_secrets)} NEW secret(s) detected:")
+            print("\n".join(new_secrets))
+            sys.exit(1)
+        print("No new secrets detected (baseline has known false positives).")
+        PYEOF
+
+    - name: Scan git history for API keys
+      run: |
+        python3 << 'PYEOF'
+        import subprocess, re, sys
+
+        patterns = {
+            "Google Maps API Key": r"AIzaSy[A-Za-z0-9_-]{33}",
+            "Tavily API Key": r"tvly-[A-Za-z0-9_-]{20,}",
+            "AWS Access Key ID": r"AKIA[0-9A-Z]{16}",
+            "Anthropic API Key": r"sk-ant-[A-Za-z0-9_-]{20,}",
+            "Generic Secret Key": r"sk-[a-zA-Z0-9]{40,}",
+        }
+
+        diff = subprocess.run(
+            ["git", "log", "--all", "-p", "--diff-filter=ACMR"],
+            capture_output=True, text=True, timeout=120
+        ).stdout
+
+        found = []
+        for name, pattern in patterns.items():
+            matches = re.findall(pattern, diff)
+            if matches:
+                # Exclude known placeholders
+                real = [m for m in matches if "YOUR_" not in m and "test_key" not in m]
+                if real:
+                    found.append(f"  {name}: {len(real)} occurrence(s)")
+
+        if found:
+            print("FAILED: API keys found in git history!")
+            print("\n".join(found))
+            print("\nYou must remove these from history before making the repo public.")
+            print("See: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository")
+            sys.exit(1)
+
+        print("No API keys found in git history.")
+        PYEOF
+
+    - name: Upload secrets report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: secrets-scan-results
+        path: secrets-report.json
+
   security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
@@ -133,7 +234,7 @@ jobs:
   all-tests-passed:
     name: All Tests Status
     runs-on: ubuntu-latest
-    needs: [test, security-scan, build-check]
+    needs: [test, secret-scan, security-scan, build-check]
     if: always()
 
     steps:
@@ -143,4 +244,8 @@ jobs:
           echo "Tests failed"
           exit 1
         fi
-        echo "All required tests passed"
+        if [ "${{ needs.secret-scan.result }}" != "success" ]; then
+          echo "Secret scan failed — potential API keys detected"
+          exit 1
+        fi
+        echo "All required checks passed"
