@@ -1,3 +1,17 @@
+# Copyright 2025 Miao Wang
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """
 LLM Client — Claude wrapper with retry and token tracking.
 
@@ -122,6 +136,7 @@ class _BedrockBearerClient:
 # ---------------------------------------------------------------------------
 
 DEFAULT_MODEL = "claude-sonnet-4-6"
+BEDROCK_DEFAULT_MODEL = "us.anthropic.claude-sonnet-4-20250514-v1:0"
 DEFAULT_MAX_TOKENS = 1024
 MAX_RETRIES = 3
 BASE_BACKOFF_SECONDS = 1.0
@@ -188,15 +203,15 @@ class LLMClient:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        default_model: str = DEFAULT_MODEL,
+        default_model: Optional[str] = None,
         force_bedrock: bool = False,
         force_bedrock_bearer: bool = False,
     ) -> None:
-        self.default_model = default_model
         self.call_history: List[Dict[str, Any]] = []
         self._total_input_tokens: int = 0
         self._total_output_tokens: int = 0
         self._estimated_cost: float = 0.0
+        self._user_model = default_model  # track if caller explicitly set model
 
         if force_bedrock_bearer:
             token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK", "")
@@ -233,6 +248,14 @@ class LLMClient:
                 "No authentication method found. Set ANTHROPIC_API_KEY, "
                 "AWS_BEARER_TOKEN_BEDROCK, or install anthropic[bedrock] with AWS credentials."
             )
+
+        # Use Bedrock model ID when on Bedrock and caller didn't set a model
+        if self._user_model is not None:
+            self.default_model = self._user_model
+        elif self.auth_method in ("bedrock", "bedrock_bearer"):
+            self.default_model = BEDROCK_DEFAULT_MODEL
+        else:
+            self.default_model = DEFAULT_MODEL
 
     # ------------------------------------------------------------------
     # Public API

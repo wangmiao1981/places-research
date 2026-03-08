@@ -1,3 +1,17 @@
+# Copyright 2025 Miao Wang
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """Tests for SentimentAnalyzer."""
 
 import json
@@ -97,6 +111,24 @@ class TestBasicAnalysis(unittest.TestCase):
         self.assertEqual(report["positive_themes"], [])
         self.assertEqual(report["overall_sentiment"], "unknown")
         self.assertEqual(llm.call.call_count, 0)
+
+    def test_dict_review_with_null_text_field(self):
+        """review.get("text") returns None when key exists with null value."""
+        analyzer, llm, prompt = make_analyzer()
+        businesses = [make_business("Place", [
+            {"text": None, "rating": 5},      # explicit null
+            {"text": "Great service"},          # normal
+            {"rating": 4},                      # missing text key
+        ])]
+        report = analyzer.analyze(businesses, "spa", "LA")
+
+        # Should not crash and should have called LLM with string reviews
+        self.assertTrue(llm.call.called)
+        # Verify the reviews sent to LLM are all strings, not "None"
+        call_args = llm.call.call_args
+        user_prompt = call_args[1]["user"] if "user" in call_args[1] else call_args[0][1]
+        self.assertNotIn("- None\n", user_prompt,
+                        "Null text field should become empty string, not literal 'None'")
 
 
 # ---------------------------------------------------------------------------
