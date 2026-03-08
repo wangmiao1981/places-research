@@ -205,5 +205,150 @@ class TestOutputSchema(unittest.TestCase):
         self.assertTrue(required_keys.issubset(set(report.keys())))
 
 
+# ---------------------------------------------------------------------------
+# Merge robustness — null fields, extra keys, single vs multi batch
+# ---------------------------------------------------------------------------
+
+class TestMergeNullFields(unittest.TestCase):
+    """Verify _merge_results handles null/None fields from LLM JSON."""
+
+    def test_single_batch_null_list_fields_become_empty_lists(self):
+        """Single-batch: LLM returns null for list fields (e.g. "positive_themes": null)."""
+        response = json.dumps({
+            "positive_themes": None,
+            "negative_themes": None,
+            "service_quality_patterns": None,
+            "unmet_needs": None,
+            "overall_sentiment": "positive",
+        })
+        analyzer, llm, prompt = make_analyzer(llm_response=response)
+        businesses = [make_business("Place", ["Great!"])]
+        report = analyzer.analyze(businesses, "spa", "LA")
+
+        # All list fields must be lists, not None
+        self.assertIsInstance(report["positive_themes"], list)
+        self.assertIsInstance(report["negative_themes"], list)
+        self.assertIsInstance(report["service_quality_patterns"], list)
+        self.assertIsInstance(report["unmet_needs"], list)
+        self.assertEqual(report["positive_themes"], [])
+
+    def test_multi_batch_null_list_fields_become_empty_lists(self):
+        """Multi-batch: LLM returns null for list fields across batches."""
+        response = json.dumps({
+            "positive_themes": None,
+            "negative_themes": ["bad service"],
+            "service_quality_patterns": None,
+            "unmet_needs": None,
+            "overall_sentiment": "negative",
+        })
+        analyzer, llm, prompt = make_analyzer(llm_response=response)
+        reviews = [f"Review {i}" for i in range(25)]  # Forces 2 batches
+        businesses = [make_business("Place", reviews)]
+        report = analyzer.analyze(businesses, "spa", "LA")
+
+        self.assertIsInstance(report["positive_themes"], list)
+        self.assertIsInstance(report["service_quality_patterns"], list)
+        self.assertIsInstance(report["unmet_needs"], list)
+        # negative_themes should have items from both batches
+        self.assertEqual(report["negative_themes"], ["bad service", "bad service"])
+
+    def test_single_batch_extra_keys_not_leaked(self):
+        """Single-batch: extra keys from LLM should not appear in output."""
+        response = json.dumps({
+            "positive_themes": ["good"],
+            "negative_themes": [],
+            "service_quality_patterns": [],
+            "unmet_needs": [],
+            "overall_sentiment": "positive",
+            "secret_internal_data": "should not leak",
+            "debug_info": {"model": "test"},
+        })
+        analyzer, llm, prompt = make_analyzer(llm_response=response)
+        businesses = [make_business("Place", ["Nice"])]
+        report = analyzer.analyze(businesses, "cafe", "NYC")
+
+        # The known schema keys should be present
+        self.assertIn("positive_themes", report)
+        # Extra LLM keys should NOT leak through
+        self.assertNotIn("secret_internal_data", report)
+        self.assertNotIn("debug_info", report)
+
+    def test_single_batch_missing_keys_get_defaults(self):
+        """Single-batch: LLM omits some expected keys entirely."""
+        response = json.dumps({
+            "overall_sentiment": "positive",
+            # Missing: positive_themes, negative_themes, etc.
+        })
+        analyzer, llm, prompt = make_analyzer(llm_response=response)
+        businesses = [make_business("Place", ["Good"])]
+        report = analyzer.analyze(businesses, "cafe", "SF")
+
+        # All expected list keys should still be present as empty lists
+        self.assertEqual(report["positive_themes"], [])
+        self.assertEqual(report["negative_themes"], [])
+        self.assertEqual(report["service_quality_patterns"], [])
+        self.assertEqual(report["unmet_needs"], [])
+        self.assertEqual(report["overall_sentiment"], "positive")
+
+    def test_single_and_multi_batch_produce_same_schema(self):
+        """Single-batch and multi-batch paths must produce identical key sets."""
+        from sentiment_analyzer import _merge_results
+
+        single_result = _merge_results([{
+            "positive_themes": ["a"],
+            "overall_sentiment": "positive",
+        }])
+
+        multi_result = _merge_results([
+            {"positive_themes": ["a"], "overall_sentiment": "positive"},
+            {"positive_themes": ["b"], "overall_sentiment": "positive"},
+        ])
+
+        self.assertEqual(set(single_result.keys()), set(multi_result.keys()),
+                        "Single and multi batch paths must have same keys")
+
+
+class TestMergeResultsDirectly(unittest.TestCase):
+    """Unit tests for _merge_results function directly."""
+
+    def test_empty_results(self):
+        from sentiment_analyzer import _merge_results
+        result = _merge_results([])
+        self.assertEqual(result["positive_themes"], [])
+        self.assertEqual(result["overall_sentiment"], "unknown")
+
+    def test_single_result_with_all_nulls(self):
+        from sentiment_analyzer import _merge_results
+        result = _merge_results([{
+            "positive_themes": None,
+            "negative_themes": None,
+            "service_quality_patterns": None,
+            "unmet_needs": None,
+            "overall_sentiment": None,
+        }])
+        self.assertIsInstance(result["positive_themes"], list)
+        self.assertIsInstance(result["negative_themes"], list)
+        self.assertEqual(result["positive_themes"], [])
+
+    def test_mixed_sentiment_across_batches(self):
+        from sentiment_analyzer import _merge_results
+        result = _merge_results([
+            {"positive_themes": ["a"], "overall_sentiment": "positive"},
+            {"negative_themes": ["b"], "overall_sentiment": "negative"},
+        ])
+        self.assertEqual(result["overall_sentiment"], "mixed")
+        self.assertEqual(result["positive_themes"], ["a"])
+        self.assertEqual(result["negative_themes"], ["b"])
+
+    def test_results_with_no_overall_sentiment(self):
+        from sentiment_analyzer import _merge_results
+        result = _merge_results([
+            {"positive_themes": ["a"]},
+            {"positive_themes": ["b"]},
+        ])
+        self.assertEqual(result["overall_sentiment"], "unknown")
+        self.assertEqual(result["positive_themes"], ["a", "b"])
+
+
 if __name__ == "__main__":
     unittest.main()

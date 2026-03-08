@@ -52,18 +52,8 @@ def _merge_results(results: List[dict]) -> dict:
     """Merge sentiment results from multiple batches."""
     if not results:
         return _make_empty_result()
-    if len(results) == 1:
-        merged = _make_empty_result()
-        merged.update(results[0])
-        return merged
 
-    merged = {
-        "positive_themes": [],
-        "negative_themes": [],
-        "service_quality_patterns": [],
-        "unmet_needs": [],
-        "overall_sentiment": "unknown",
-    }
+    merged = _make_empty_result()
     sentiments = []
     for r in results:
         merged["positive_themes"].extend(r.get("positive_themes") or [])
