@@ -66,24 +66,35 @@ Once you have business data (from grid search or the included sample), run the
 
 ### Quick Start with Sample Data
 
-No Google Maps key needed — try it immediately with the included sample:
+No Google Maps key needed — try it immediately with the included sample data
+and the step-by-step example script in [`examples/run_analysis.py`](examples/run_analysis.py):
 
 ```bash
-# Install all dependencies
+# Install dependencies
 pip install -r requirements.txt
-pip install -r requirements-dev.txt
 
-# Set up API keys (only LLM key is required; web search is optional)
-cp .env.example .env
-# Edit .env — set ANTHROPIC_API_KEY (or AWS_BEARER_TOKEN_BEDROCK)
-# Optionally set TAVILY_API_KEY for web research
+# Set your LLM key (pick one):
+export ANTHROPIC_API_KEY="sk-ant-..."          # Option A: Anthropic API
+# export AWS_BEARER_TOKEN_BEDROCK="your-token" # Option B: AWS Bedrock
 
-# Run the full pipeline on sample data
-PYTHONPATH=src python3 src/analyze.py --input examples/sample_massage_san_jose.json
+# Optional: enable web research stage
+export TAVILY_API_KEY="tvly-..."               # Free key from tavily.com
+
+# Run the example
+PYTHONPATH=src python3 examples/run_analysis.py
 ```
 
-The interactive interview asks 6 quick questions about your business plan, then
-the pipeline runs automatically through all stages.
+The example script checks your API keys, walks you through a short interactive
+interview about your business plan, then runs the full pipeline and prints a
+summary with links to all generated artifacts. See
+[`examples/run_analysis.py`](examples/run_analysis.py) for detailed setup
+instructions, stage descriptions, expected output, and advanced usage options.
+
+You can also run the pipeline directly:
+
+```bash
+PYTHONPATH=src python3 src/analyze.py --input examples/sample_massage_san_jose.json
+```
 
 ### End-to-End: From Data Collection to Report
 
